@@ -49,7 +49,7 @@ public class UsageExample {
 		
 			boolean solved = agent.solve();
 			if (solved) {
-				success++;	
+				success++;
 			}
 		}
 		double rate = (double)success / (double)iterations;
