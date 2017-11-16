@@ -7,9 +7,9 @@ import java.io.InputStreamReader;
 
 public class MSField {
 
-	private boolean[][] f;
+	private boolean[][] f;	//field tracking mines. true = bomb, false = no bomb.
 	
-	private int[][] uf;
+	private int[][] uf;	// field tracking covered or uncovered. -1 = uncovered without bomb
 	
 	private int numOfCols = 0;
 	private int numOfRows = 0;
