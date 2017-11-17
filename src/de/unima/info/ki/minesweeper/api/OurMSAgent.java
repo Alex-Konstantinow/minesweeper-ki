@@ -1,5 +1,6 @@
 package de.unima.info.ki.minesweeper.api;
 
+import java.util.ArrayList;
 import java.util.Random;
 
 //SAT4J muss noch importiert werden
@@ -8,7 +9,7 @@ public class OurMSAgent extends MSAgent{
 
     private int[][] fieldView;
     private boolean[][] mineView;
-    private int[] viableMoves;
+    private ArrayList<Tupel> viableMoves = new ArrayList<Tupel>();
 
     private boolean displayActivated = false;
     private boolean firstDecision = true;
@@ -25,7 +26,7 @@ public class OurMSAgent extends MSAgent{
 
         fieldView = new int[field.getNumOfCols()][field.getNumOfRows()];
         mineView = new boolean[field.getNumOfCols()][field.getNumOfRows()];
-        viableMoves = new int[field.getNumOfRows() * field.getNumOfCols()];
+//        viableMoves = new int[field.getNumOfRows() * field.getNumOfCols()];
 
         this.rand = new Random();
 
@@ -35,7 +36,11 @@ public class OurMSAgent extends MSAgent{
                 fieldView[i][j] = -1;
             }
         }
-
+        for(int i = 0; i<mineView.length; i++) {
+            for(int j = 0; j<mineView[i].length; j++) {
+                mineView[i][j] = false;
+            }
+        }
         do {
             if (displayActivated) System.out.println(field);
             if (firstDecision) {
@@ -46,20 +51,31 @@ public class OurMSAgent extends MSAgent{
             }
             else {
                 //Geht das gesamte Feld durch und prüft, ob dieses aufgedeckt weden kann/muss
-                for(int i = 0; i<field.getNumOfRows(); i++) {
-                    for(int j = 0; i<field.getNumOfCols(); j++) {
-                        if(validPosition(i,j) && fieldView[i][j] == -1 && sat(i,j)) {
-                            feedback = uncover(i,j);
-                            secureMove = true;
+                for(int i = 0; i<field.getNumOfCols(); i++) {
+                    for(int j = 0; i<field.getNumOfRows(); j++) {
+//                        if(validPosition(i,j) && fieldView[i][j] == -1 && sat(i,j)) {
+//                            feedback = uncover(i,j);
+//                            secureMove = true;
+//                        }
+                        if(fieldView[i][j] == -1 && hasOpenNeighbor(i,j) > 0) {
+                            Tupel t = new Tupel(i,j);
+                            viableMoves.add(t);
+
+//                            secureMove = true;
                         }
                     }
                 }
+                KnowledgeBase KB = new KnowledgeBase();
+                for(Tupel t:viableMoves){
+                    
 
+                }
+                feedback = uncover(x,y);
                 //Falls nach dem Durchlauf des gesamten Feldes kein sicherer Zug gefunden werden konnte, wird hier ein zufälliger Zug ausgewählt
                 if(!secureMove) {
-                    randomMove = rand.nextInt(viableMoves.length);
-                    feedback = uncover(randomMove/field.getNumOfCols(), randomMove%field.getNumOfCols());
-                    secureMove = true;
+//                    randomMove = rand.nextInt(viableMoves.length);
+//                    feedback = uncover(randomMove/field.getNumOfCols(), randomMove%field.getNumOfCols());
+//                    secureMove = true;
                 }
                 feedback = 0;
                 //x = bestCellChooser();
@@ -124,7 +140,7 @@ public class OurMSAgent extends MSAgent{
      * wenn du ein covered feld nach uncovered nachbarn abchecken willst, benutz das hier oder so.
      *
      */
-    private boolean hasOpenNeighbor(int x, int y){
+    private int hasOpenNeighbor(int x, int y){
         int counter = 0;
         if (validPosition(x+1, y+1) && fieldView[x+1][y+1] != -1) counter++;
         if (validPosition(x+1, y)   && fieldView[x+1][y] != -1) counter++;
@@ -135,9 +151,10 @@ public class OurMSAgent extends MSAgent{
         if (validPosition(x-1, y)   && fieldView[x-1][y] != -1) counter++;
         if (validPosition(x-1, y-1) && fieldView[x-1][y-1] != -1) counter++;
 
-        if(counter > 0)return true;
-        return false;
+        return counter;
     }
+
+
 
     private boolean validPosition(int x, int y) {
         if (x >= 0 && x < field.getNumOfCols() && y >= 0 && y < field.getNumOfRows()) return true;
@@ -146,11 +163,11 @@ public class OurMSAgent extends MSAgent{
 
     @Override
     public void activateDisplay() {
-
+        this.displayActivated = true;
     }
 
     @Override
     public void deactivateDisplay() {
-
+        this.displayActivated = false;
     }
 }
