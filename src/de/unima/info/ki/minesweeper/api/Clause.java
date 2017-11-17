@@ -3,9 +3,16 @@ package de.unima.info.ki.minesweeper.api;
 public class Clause {
     private int[] clause;
 
-    private Clause(int literal){
+    public Clause(int literal){
         clause = new int[1];
         clause[0] = literal;
+    }
+
+    public Clause(int[] clause){
+        this.clause = new int[clause.length];
+        for(int i = 0; i < clause.length; i++){
+            this.clause[i] = clause[i];
+        }
     }
 
     public int[] getClause() {

@@ -9,7 +9,7 @@ public class OurMSAgent extends MSAgent{
 
     private int[][] fieldView;
     private boolean[][] mineView;
-    private ArrayList<Tupel> viableMoves = new ArrayList<Tupel>();
+    private ArrayList<Tuple> viableMoves = new ArrayList<Tuple>();
 
     private boolean displayActivated = false;
     private boolean firstDecision = true;
@@ -58,7 +58,7 @@ public class OurMSAgent extends MSAgent{
 //                            secureMove = true;
 //                        }
                         if(fieldView[i][j] == -1 && hasOpenNeighbor(i,j) > 0) {
-                            Tupel t = new Tupel(i,j);
+                            Tuple t = new Tuple(i,j);
                             viableMoves.add(t);
 
 //                            secureMove = true;
@@ -66,11 +66,11 @@ public class OurMSAgent extends MSAgent{
                     }
                 }
                 KnowledgeBase KB = new KnowledgeBase();
-                for(Tupel t:viableMoves){
-                    
+                for(Tuple t:viableMoves){
+
 
                 }
-                feedback = uncover(x,y);
+//                feedback = uncover(x,y);
                 //Falls nach dem Durchlauf des gesamten Feldes kein sicherer Zug gefunden werden konnte, wird hier ein zufälliger Zug ausgewählt
                 if(!secureMove) {
 //                    randomMove = rand.nextInt(viableMoves.length);
@@ -103,18 +103,18 @@ public class OurMSAgent extends MSAgent{
     }
 
     //Gibt ein Array zurück mit allen derzeit möglichen Zellen
-    private int[] getViableMoves() {
-        viableMoves = new int[countViableCells()];
-        for(int i = 1; i<field.getNumOfRows(); i++) {
-            for(int j = 1; j<field.getNumOfCols(); j++) {
-                if(validPosition(i,j) && fieldView[i][j] == -1 && sat(i,j)) {
-                    viableMoves[i] = i*field.getNumOfCols() + j +1;
-                }
-            }
-        }
-
-        return viableMoves;
-    }
+//    private int[] getViableMoves() {
+//        viableMoves = new int[countViableCells()];
+//        for(int i = 1; i<field.getNumOfRows(); i++) {
+//            for(int j = 1; j<field.getNumOfCols(); j++) {
+//                if(validPosition(i,j) && fieldView[i][j] == -1 && sat(i,j)) {
+//                    viableMoves[i] = i*field.getNumOfCols() + j +1;
+//                }
+//            }
+//        }
+//
+//        return viableMoves;
+//    }
 
     //Zählt alle derzeit möglichen Zellen
     private int countViableCells() {
@@ -154,7 +154,64 @@ public class OurMSAgent extends MSAgent{
         return counter;
     }
 
+    private Tuple[][] createClauses(Tuple[] cells){
+        Tuple[][] t = new Tuple[(int) Math.pow(2,cells.length)][cells.length];
+        t = getAllCombinations(t, cells.length-1);
+        for(int i = 0; i < t.length; i++){
+            for(int j = 0; j < t[0].length; j++){
+                System.out.println(t[i][j] + " ");
+            }
+        }
 
+        return t;
+    }
+
+    /**
+     * oh boy diese methode hat lange gedauert die löscht mir keiner weg.
+     * @param cells
+     * @param depth
+     * @return
+     */
+    private Tuple[][] getAllCombinations(Tuple[][] cells, int depth){
+//        Tuple[][] rekursionCells = new Tuple[cells.length][cells[0].length];
+//        for(int i = 0; i < rekursionCells.length; i++){
+//            for(int j = 0; j < rekursionCells.length; j++){
+//                rekursionCells[i][j] = new Tuple(cells[i][j].getX(),cells[i][j].getY());
+//            }
+//        }
+        if(depth == 0){
+            cells[0][depth].setValue(false);
+            cells[1][depth].setValue(true);
+            return cells;
+        }
+        Tuple[][] returnCells = new Tuple[cells.length][cells[0].length];
+        Tuple[][] upCellA = new Tuple[cells.length / 2][cells[0].length];
+        Tuple[][] upCellB = new Tuple[cells.length / 2][cells[0].length];
+        Tuple[][] downCellA = getAllCombinations(upCellA, depth -1);
+        Tuple[][] downCellB = getAllCombinations(upCellB, depth -1);
+
+
+        for(int i = 0; i < upCellA.length; i++){
+            for(int j = 0; j < upCellA[0].length; j++){
+                returnCells[i][j].setValue(downCellA[i][j].isValue());
+                returnCells[(cells.length / 2) + i][j].setValue(downCellB[i][j].isValue());
+            }
+            returnCells[i][depth].setValue(false);
+            returnCells[(cells.length / 2) + i][depth].setValue(true);
+        }
+
+        
+//        for(int i = 0; i < Math.pow(2, depth); i++){
+//            if(i < Math.pow(2, depth) / 2){
+//                cells[index][i] = getAllCombinations()
+//
+//            }else{
+//
+//            }
+//        }
+
+        return returnCells;
+    }
 
     private boolean validPosition(int x, int y) {
         if (x >= 0 && x < field.getNumOfCols() && y >= 0 && y < field.getNumOfRows()) return true;
