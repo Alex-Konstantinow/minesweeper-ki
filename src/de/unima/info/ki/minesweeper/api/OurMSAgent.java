@@ -235,4 +235,26 @@ public class OurMSAgent extends MSAgent{
     public void deactivateDisplay() {
         this.displayActivated = false;
     }
+
+    /**
+     * Creates a Truthtable dynamically to the amount of varables.
+     * @param numberOfVariables between 0 and 8
+     */
+    public void createTruthTable(int numberOfVariables) {
+        String[] binarycode = new String[(int) Math.pow(2.0, numberOfVariables)];
+        int[][] truthTable = new int[(int) Math.pow(2.0, numberOfVariables)][numberOfVariables];
+
+        for(int i = 0; i < (int) Math.pow(2.0, numberOfVariables); i++) {
+            binarycode[i] = Integer.toBinaryString(i);
+            while(binarycode[i].length() < numberOfVariables){
+                binarycode[i] = "0" + binarycode[i];
+            }
+        }
+
+        for(int i = 0; i < truthTable.length; i++) {
+            for(int j = 0; j < numberOfVariables; j++) {
+                truthTable[i][j] = binarycode[i].charAt(j) == '0' ?  0 : 1;
+            }
+        }
+    }
 }
