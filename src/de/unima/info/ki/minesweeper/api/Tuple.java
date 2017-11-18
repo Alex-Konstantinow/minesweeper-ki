@@ -5,6 +5,11 @@ public class Tuple {
     private int y;
     private boolean value;
 
+    /**
+     * Sind die Zellen
+     * @param x
+     * @param y
+     */
     public Tuple(int x, int y){
         this.x = x;
         this.y = y;

@@ -1,6 +1,7 @@
 package de.unima.info.ki.minesweeper.api;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Random;
 
 //SAT4J muss noch importiert werden
@@ -13,6 +14,8 @@ public class OurMSAgent extends MSAgent{
 
     private boolean displayActivated = false;
     private boolean firstDecision = true;
+    private HashMap<Tuple, Integer> variables = new HashMap<Tuple, Integer>();
+
 
     private Random rand = null;
 
@@ -27,7 +30,12 @@ public class OurMSAgent extends MSAgent{
         fieldView = new int[field.getNumOfCols()][field.getNumOfRows()];
         mineView = new boolean[field.getNumOfCols()][field.getNumOfRows()];
 //        viableMoves = new int[field.getNumOfRows() * field.getNumOfCols()];
-
+        int varNumber = 0;
+        for(int i = 0; i < field.getNumOfRows(); i++) {
+            for(int j = 0; j < field.getNumOfCols(); j++) {
+                variables.put(new Tuple(i, j), varNumber++);
+            }
+        }
         this.rand = new Random();
 
         //Initialisiert fieldView mit -1, da zu Beginn noch kein Feld aufgedeckt ist
@@ -136,8 +144,10 @@ public class OurMSAgent extends MSAgent{
     }
 
     /**
-     * wenn du ein covered feld nach uncovered nachbarn abchecken willst, benutz das hier oder so.
-     *
+     * Calculates all uncovered neighbours of an covered field.
+     * @param x
+     * @param y
+     * @return number of varables for the truthtable
      */
     private int hasOpenNeighbor(int x, int y){
         int counter = 0;
@@ -156,12 +166,6 @@ public class OurMSAgent extends MSAgent{
     public Tuple[][] createClauses(Tuple[] cells){
         Tuple[][] t = new Tuple[(int) Math.pow(2,cells.length)][cells.length],
                 t2 = new Tuple[(int) Math.pow(2,cells.length)][cells.length];
-//        for(int i = 0; i < t.length; i++){
-//            for(int j = 0; j < t[0].length; j++){
-//                t[i][j] = new Tuple(0,0);
-//            }
-//        }
-        t = getAllCombinations(t, cells.length-2);
         for(int i = 0; i < t.length; i++){
             for(int j = 0; j < t[0].length; j++){
                 System.out.println(t[i][j] + " ");
@@ -171,13 +175,7 @@ public class OurMSAgent extends MSAgent{
         return t;
     }
 
-    /**
-     * oh boy diese methode hat lange gedauert die löscht mir keiner weg.
-     * @param cells
-     * @param depth
-     * @return
-     */
-    private Tuple[][] getAllCombinations(Tuple[][] cells, int depth){
+/*    private Tuple[][] getAllCombinations(Tuple[][] cells, int depth){
 //        Tuple[][] rekursionCells = new Tuple[cells.length][cells[0].length];
 //        for(int i = 0; i < rekursionCells.length; i++){
 //            for(int j = 0; j < rekursionCells.length; j++){
@@ -219,7 +217,7 @@ public class OurMSAgent extends MSAgent{
 //        }
 
         return returnCells;
-    }
+    }*/
 
     private boolean validPosition(int x, int y) {
         if (x >= 0 && x < field.getNumOfCols() && y >= 0 && y < field.getNumOfRows()) return true;
