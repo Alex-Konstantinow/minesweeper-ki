@@ -154,7 +154,7 @@ public class OurMSAgent extends MSAgent{
         return counter;
     }
 
-    private Tuple[][] createClauses(Tuple[] cells){
+    public Tuple[][] createClauses(Tuple[] cells){
         Tuple[][] t = new Tuple[(int) Math.pow(2,cells.length)][cells.length];
         t = getAllCombinations(t, cells.length-1);
         for(int i = 0; i < t.length; i++){
