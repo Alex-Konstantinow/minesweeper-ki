@@ -22,6 +22,10 @@ public class Tuple {
         this.value = value;
     }
 
+    public boolean isTupel(int x, int y) {
+        return (this.x == x && this.y == y);
+    }
+
     public int getY() {
         return y;
     }
