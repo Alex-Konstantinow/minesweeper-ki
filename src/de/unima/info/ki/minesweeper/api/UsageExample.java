@@ -4,11 +4,11 @@ public class UsageExample {
 
 
 	public static void main(String[] args) {
-//		Tuple[] t = new Tuple[8];
-//		OurMSAgent om = new OurMSAgent();
-//		om.createClauses(t);
-//		// use smaller numbers for larger fields
-//		int iterations = 10000;
+		Tuple[] t = new Tuple[8];
+		OurMSAgent om = new OurMSAgent();
+		om.createClauses(t);
+		// use smaller numbers for larger fields
+		int iterations = 10000;
 		
 		// if you want to iterate over all of them, this might help
 		String[] fields = {

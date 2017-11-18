@@ -50,6 +50,7 @@ public class OurMSAgent extends MSAgent{
                 firstDecision = false;
             }
             else {
+//                secureMove = false;
                 //Geht das gesamte Feld durch und prüft, ob dieses aufgedeckt weden kann/muss
                 for(int i = 0; i<field.getNumOfCols(); i++) {
                     for(int j = 0; i<field.getNumOfRows(); j++) {
@@ -57,11 +58,9 @@ public class OurMSAgent extends MSAgent{
 //                            feedback = uncover(i,j);
 //                            secureMove = true;
 //                        }
-                        if(fieldView[i][j] == -1 && hasOpenNeighbor(i,j) > 0) {
+                        if(fieldView[i][j] != -1 && hasOpenNeighbor(i,j) > 0) {
                             Tuple t = new Tuple(i,j);
                             viableMoves.add(t);
-
-//                            secureMove = true;
                         }
                     }
                 }
@@ -155,8 +154,14 @@ public class OurMSAgent extends MSAgent{
     }
 
     public Tuple[][] createClauses(Tuple[] cells){
-        Tuple[][] t = new Tuple[(int) Math.pow(2,cells.length)][cells.length];
-        t = getAllCombinations(t, cells.length-1);
+        Tuple[][] t = new Tuple[(int) Math.pow(2,cells.length)][cells.length],
+                t2 = new Tuple[(int) Math.pow(2,cells.length)][cells.length];
+//        for(int i = 0; i < t.length; i++){
+//            for(int j = 0; j < t[0].length; j++){
+//                t[i][j] = new Tuple(0,0);
+//            }
+//        }
+        t = getAllCombinations(t, cells.length-2);
         for(int i = 0; i < t.length; i++){
             for(int j = 0; j < t[0].length; j++){
                 System.out.println(t[i][j] + " ");
@@ -180,6 +185,8 @@ public class OurMSAgent extends MSAgent{
 //            }
 //        }
         if(depth == 0){
+//            cells[0][depth] = new Tuple(0,0);
+//            cells[1][depth] = new Tuple(0,0);
             cells[0][depth].setValue(false);
             cells[1][depth].setValue(true);
             return cells;
@@ -193,6 +200,7 @@ public class OurMSAgent extends MSAgent{
 
         for(int i = 0; i < upCellA.length; i++){
             for(int j = 0; j < upCellA[0].length; j++){
+                returnCells[i][j] = new Tuple(0,0);
                 returnCells[i][j].setValue(downCellA[i][j].isValue());
                 returnCells[(cells.length / 2) + i][j].setValue(downCellB[i][j].isValue());
             }
