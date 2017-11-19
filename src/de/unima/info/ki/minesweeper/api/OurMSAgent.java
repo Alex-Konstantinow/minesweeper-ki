@@ -5,7 +5,7 @@ import java.util.Random;
 
 //SAT4J muss noch importiert werden
 
-public class OurMSAgent extends MSAgent{
+public class OurMSAgent extends MSAgent {
 
     private int[][] fieldView;
     private boolean[][] mineView;
@@ -30,8 +30,8 @@ public class OurMSAgent extends MSAgent{
         this.rand = new Random();
 
         //Initialisiert fieldView mit -1, da zu Beginn noch kein Feld aufgedeckt ist
-        for(int i = 0; i<fieldView.length; i++) {
-            for(int j = 0; j<fieldView[i].length; j++) {
+        for (int i = 0; i < fieldView.length; i++) {
+            for (int j = 0; j < fieldView[i].length; j++) {
                 fieldView[i][j] = -1;
             }
         }
@@ -40,28 +40,27 @@ public class OurMSAgent extends MSAgent{
             if (firstDecision) {
                 x = 0;
                 y = 0;
-                feedback = doMove(0,0);
+                feedback = doMove(0, 0);
                 firstDecision = false;
-            }
-            else {
+            } else {
 //                secureMove = false;
                 //Geht das gesamte Feld durch und prüft, ob dieses aufgedeckt weden kann/muss
-                for(int i = 0; i<field.getNumOfCols(); i++) {
-                    for(int j = 0; i<field.getNumOfRows(); j++) {
+                for (int i = 0; i < field.getNumOfCols(); i++) {
+                    for (int j = 0; i < field.getNumOfRows(); j++) {
 //                        if(validPosition(i,j) && fieldView[i][j] == -1 && sat(i,j)) {
 //                            feedback = doMove(i,j);
 //                            secureMove = true;
 //                        }
-                        int numberOfNeighbors = numberOfOpenNeighbor(i,j);
+                        int numberOfNeighbors = numberOfOpenNeighbor(i, j);
                         int numberOfBombsInNeighborhood = getNumberOfBombsInNeighborhood(i, j);
-                        if(fieldView[i][j] != -1 && numberOfNeighbors > 0) {
+                        if (fieldView[i][j] != -1 && numberOfNeighbors > 0) {
                             createTruthTable(variables, fieldView[i][j] - numberOfBombsInNeighborhood);
                         }
                     }
                 }
                 KnowledgeBase KB = new KnowledgeBase();
                 //Falls nach dem Durchlauf des gesamten Feldes kein sicherer Zug gefunden werden konnte, wird hier ein zufälliger Zug ausgewählt
-                if(!secureMove) {
+                if (!secureMove) {
 //                    randomMove = rand.nextInt(viableMoves.length);
 //                    feedback = doMove(randomMove/field.getNumOfCols(), randomMove%field.getNumOfCols());
 //                    secureMove = true;
@@ -70,15 +69,15 @@ public class OurMSAgent extends MSAgent{
             }
             //if (displayActivated) System.out.println("Uncovering (" + x + "," + y + ")");
             //feedback = doMove(x,y);
-        } while(feedback >= 0 && !field.solved());
+        } while (feedback >= 0 && !field.solved());
 
         return false;
     }
 
     //Deckt das Feld (x,y) auf und ändert den Wert in fieldView[x][y] auf die entsprechende Anzahl an Minen, die um das Feld herum liegen
     private int doMove(int x, int y) {
-        if(validPosition(x,y) && fieldView[x][y] == -1) {
-            fieldView[x][y] = field.uncover(x,y);
+        if (validPosition(x, y) && fieldView[x][y] == -1) {
+            fieldView[x][y] = field.uncover(x, y);
         }
         return fieldView[x][y];
     }
@@ -100,9 +99,9 @@ public class OurMSAgent extends MSAgent{
     //Zählt alle derzeit möglichen Zellen
     private int countViableCells() {
         int amountViableCells = 0;
-        for(int i = 1; i<field.getNumOfRows(); i++) {
-            for(int j = 1; j<field.getNumOfCols(); j++) {
-                if(validPosition(i,j) && fieldView[i][j] == -1) {
+        for (int i = 1; i < field.getNumOfRows(); i++) {
+            for (int j = 1; j < field.getNumOfCols(); j++) {
+                if (validPosition(i, j) && fieldView[i][j] == -1) {
                     amountViableCells++;
                 }
             }
@@ -112,28 +111,28 @@ public class OurMSAgent extends MSAgent{
 
     private int getNumberOfBombsInNeighborhood(int x, int y) {
         int counter = 0;
-        if (mineView[x+1][y+1]) {
+        if (mineView[x + 1][y + 1]) {
             counter++;
         }
-        if (mineView[x+1][y]) {
+        if (mineView[x + 1][y]) {
             counter++;
         }
-        if (mineView[x+1][y-1]) {
+        if (mineView[x + 1][y - 1]) {
             counter++;
         }
-        if (mineView[x][y+1]) {
+        if (mineView[x][y + 1]) {
             counter++;
         }
-        if (mineView[x][y-1]) {
+        if (mineView[x][y - 1]) {
             counter++;
         }
-        if (mineView[x-1][y+1]) {
+        if (mineView[x - 1][y + 1]) {
             counter++;
         }
-        if (mineView[x-1][y]) {
+        if (mineView[x - 1][y]) {
             counter++;
         }
-        if (mineView[x-1][y-1]) {
+        if (mineView[x - 1][y - 1]) {
             counter++;
         }
         return counter;
@@ -141,42 +140,43 @@ public class OurMSAgent extends MSAgent{
 
     /**
      * Calculates all uncovered neighbours of an covered field.
+     *
      * @param x
      * @param y
      * @return number of varables for the truthtable
      */
-    private int numberOfOpenNeighbor(int x, int y){
+    private int numberOfOpenNeighbor(int x, int y) {
         int counter = 0;
-        if (validPosition(x+1, y+1) && fieldView[x+1][y+1] != -1) {
-            variables.add((x+1) * field.getNumOfCols() + (y+1) + 1);
+        if (validPosition(x + 1, y + 1) && fieldView[x + 1][y + 1] != -1) {
+            variables.add((x + 1) * field.getNumOfCols() + (y + 1) + 1);
             counter++;
         }
-        if (validPosition(x+1, y)   && fieldView[x+1][y] != -1) {
-            variables.add((x+1) * field.getNumOfCols() + (1) + 1);
+        if (validPosition(x + 1, y) && fieldView[x + 1][y] != -1) {
+            variables.add((x + 1) * field.getNumOfCols() + (1) + 1);
             counter++;
         }
-        if (validPosition(x+1, y-1) && fieldView[x+1][y-1] != -1) {
-            variables.add((x+1) * field.getNumOfCols() + (y-1) + 1);
+        if (validPosition(x + 1, y - 1) && fieldView[x + 1][y - 1] != -1) {
+            variables.add((x + 1) * field.getNumOfCols() + (y - 1) + 1);
             counter++;
         }
-        if (validPosition(x, y+1) && fieldView[x][y+1] != -1) {
-            variables.add((x) * field.getNumOfCols() + (y+1) + 1);
+        if (validPosition(x, y + 1) && fieldView[x][y + 1] != -1) {
+            variables.add((x) * field.getNumOfCols() + (y + 1) + 1);
             counter++;
         }
-        if (validPosition(x, y-1) && fieldView[x][y-1] != -1) {
-            variables.add((x) * field.getNumOfCols() + (y-1) + 1);
+        if (validPosition(x, y - 1) && fieldView[x][y - 1] != -1) {
+            variables.add((x) * field.getNumOfCols() + (y - 1) + 1);
             counter++;
         }
-        if (validPosition(x-1, y+1) && fieldView[x-1][y+1] != -1) {
-            variables.add((x-1) * field.getNumOfCols() + (y+1) + 1);
+        if (validPosition(x - 1, y + 1) && fieldView[x - 1][y + 1] != -1) {
+            variables.add((x - 1) * field.getNumOfCols() + (y + 1) + 1);
             counter++;
         }
-        if (validPosition(x-1, y)   && fieldView[x-1][y] != -1) {
-            variables.add((x-1) * field.getNumOfCols() + (y) + 1);
+        if (validPosition(x - 1, y) && fieldView[x - 1][y] != -1) {
+            variables.add((x - 1) * field.getNumOfCols() + (y) + 1);
             counter++;
         }
-        if (validPosition(x-1, y-1) && fieldView[x-1][y-1] != -1) {
-            variables.add((x-1) * field.getNumOfCols() + (y-1) + 1);
+        if (validPosition(x - 1, y - 1) && fieldView[x - 1][y - 1] != -1) {
+            variables.add((x - 1) * field.getNumOfCols() + (y - 1) + 1);
             counter++;
         }
 
@@ -185,6 +185,7 @@ public class OurMSAgent extends MSAgent{
 
     /**
      * Checks if the cell is at the border.
+     *
      * @param x
      * @param y
      * @return true if its not at the border
@@ -214,22 +215,22 @@ public class OurMSAgent extends MSAgent{
         /**
          * Somehow magic create solver here
          */
-        for(int i = 0; i < (int) Math.pow(2.0, numberOfVariables); i++) {
+        for (int i = 0; i < (int) Math.pow(2.0, numberOfVariables); i++) {
             binarycode[i] = Integer.toBinaryString(i);
-            while(binarycode[i].length() < numberOfVariables){
+            while (binarycode[i].length() < numberOfVariables) {
                 binarycode[i] = "0" + binarycode[i];
             }
         }
         int[] clausel;
         int bombCounter;
-        for(int i = 0; i < truthTable.length; i++) {
+        for (int i = 0; i < truthTable.length; i++) {
             clausel = new int[numberOfVariables];
             bombCounter = 0;
             String strClausel;
-            for(int j = 0; j < numberOfVariables; j++) {
-                truthTable[i][j] = binarycode[i].charAt(j) == '0' ?  0 : 1;
+            for (int j = 0; j < numberOfVariables; j++) {
+                truthTable[i][j] = binarycode[i].charAt(j) == '0' ? 0 : 1;
 
-                if(Integer.parseInt("" + truthTable[i][j]) == 0) {
+                if (Integer.parseInt("" + truthTable[i][j]) == 0) {
                     strClausel = "-" + String.valueOf(variables.get(j));
                     bombCounter++;
                 } else {
@@ -237,7 +238,7 @@ public class OurMSAgent extends MSAgent{
                 }
                 clausel[j] = Integer.parseInt(strClausel);
             }
-            if(bombCounter != numberOfBombs) {
+            if (bombCounter != numberOfBombs) {
                 // solver.addClausel(new VecInt(clausel));
             }
         }
