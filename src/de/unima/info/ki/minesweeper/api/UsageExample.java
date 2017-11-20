@@ -5,8 +5,8 @@ public class UsageExample {
 
 	public static void main(String[] args) {
 		Tuple[] t = new Tuple[8];
-		OurMSAgent om = new OurMSAgent();
-		om.createClauses(t);
+		//OurMSAgent om = new OurMSAgent();
+		//om.createClauses(t);
 		// use smaller numbers for larger fields
 		int iterations = 10000;
 		
@@ -43,7 +43,8 @@ public class UsageExample {
 
 			i++;
 			MSField f = new MSField("fields/baby3-5x5-1.txt");
-			RandomMSAgent agent = new RandomMSAgent();
+			//RandomMSAgent agent = new RandomMSAgent();
+			OurMSAgent agent = new OurMSAgent(f.getNumOfRows(), f.getNumOfCols());
 			agent.setField(f);
 			// to see what happens in the first iteration
 			if (i == 1) agent.activateDisplay();

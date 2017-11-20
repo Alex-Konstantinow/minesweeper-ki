@@ -3,20 +3,38 @@ package de.unima.info.ki.minesweeper.api;
 import java.util.ArrayList;
 import java.util.Random;
 
-//SAT4J muss noch importiert werden
+import org.sat4j.minisat.SolverFactory;
+import org.sat4j.specs.*;
+import org.sat4j.core.VecInt;
 
 public class OurMSAgent extends MSAgent {
 
     private int[][] fieldView;
     private boolean[][] mineView;
+    //private int[] viableMoves; --> RandomMove
 
     private boolean displayActivated = false;
     private boolean firstDecision = true;
+
     private ArrayList<Integer> variables = new ArrayList<>();
 
     private Random rand = null;
 
-    KnowledgeBase clauses = new KnowledgeBase();
+    ISolver solver;
+
+    public OurMSAgent() {
+        solver = SolverFactory.newDefault();
+    }
+
+    public OurMSAgent(int row, int column) {
+        initSolver(row, column);
+    }
+
+    private void initSolver(int row, int column) {
+        solver = SolverFactory.newDefault();
+        solver.newVar(row * column);
+        solver.setExpectedNumberOfClauses(getExpectedTotalAmountClauses(row, column));
+    }
 
     @Override
     public boolean solve() {
@@ -26,8 +44,8 @@ public class OurMSAgent extends MSAgent {
 
         fieldView = new int[field.getNumOfCols()][field.getNumOfRows()];
         mineView = new boolean[field.getNumOfCols()][field.getNumOfRows()];
-//        viableMoves = new int[field.getNumOfRows() * field.getNumOfCols()]; //Random moves
-        this.rand = new Random();
+        //viableMoves = new int[field.getNumOfRows() * field.getNumOfCols()]; --> Random moves
+        //this.rand = new Random(); --> Random moves
 
         //Initialisiert fieldView mit -1, da zu Beginn noch kein Feld aufgedeckt ist
         for (int i = 0; i < fieldView.length; i++) {
@@ -40,32 +58,34 @@ public class OurMSAgent extends MSAgent {
             if (firstDecision) {
                 x = 0;
                 y = 0;
-                feedback = doMove(0, 0);
+                feedback = doMove(x, y);
                 firstDecision = false;
             } else {
-//                secureMove = false;
+                //secureMove = false;
                 //Geht das gesamte Feld durch und prüft, ob dieses aufgedeckt weden kann/muss
                 for (int i = 0; i < field.getNumOfCols(); i++) {
                     for (int j = 0; i < field.getNumOfRows(); j++) {
-//                        if(validPosition(i,j) && fieldView[i][j] == -1 && sat(i,j)) {
-//                            feedback = doMove(i,j);
-//                            secureMove = true;
-//                        }
-                        int numberOfNeighbors = numberOfOpenNeighbor(i, j);
-                        int numberOfBombsInNeighborhood = getNumberOfBombsInNeighborhood(i, j);
-                        if (fieldView[i][j] != -1 && numberOfNeighbors > 0) {
-                            createTruthTable(variables, fieldView[i][j] - numberOfBombsInNeighborhood);
+                        if (validPosition(i, j) && fieldView[i][j] == -1 && !sat(i, j)) {
+                            feedback = doMove(i, j);
+                            secureMove = true;
                         }
+                        /*int numberOfOpenNeighbor = numberOfOpenNeighbor(i, j);
+                        int numberOfBombsInNeighborhood = getNumberOfBombsInNeighborhood(i, j);
+                        if (fieldView[i][j] != -1 && numberOfOpenNeighbor > 0) {
+                            createTruthTable(variables, fieldView[i][j] - numberOfBombsInNeighborhood);
+                        }*/
                     }
                 }
-                KnowledgeBase KB = new KnowledgeBase();
+
                 //Falls nach dem Durchlauf des gesamten Feldes kein sicherer Zug gefunden werden konnte, wird hier ein zufälliger Zug ausgewählt
                 if (!secureMove) {
 //                    randomMove = rand.nextInt(viableMoves.length);
 //                    feedback = doMove(randomMove/field.getNumOfCols(), randomMove%field.getNumOfCols());
 //                    secureMove = true;
                 }
+
                 feedback = 0;
+
             }
             //if (displayActivated) System.out.println("Uncovering (" + x + "," + y + ")");
             //feedback = doMove(x,y);
@@ -74,12 +94,92 @@ public class OurMSAgent extends MSAgent {
         return false;
     }
 
+    private boolean sat(int x, int y) {
+        int[] negLiteral = {-getVariableNumber(x, y)};
+        IConstr c = addToSolver(negLiteral);
+
+        try {
+            IProblem problem = solver;
+            if (problem.isSatisfiable()) {
+                return true;
+            } else {
+                return false;
+            }
+        } catch (TimeoutException e) {
+            System.out.println("Timeout, sorry");
+        }
+        solver.removeConstr(c);
+
+        return true;
+    }
+
+    private int getVariableNumber(int x, int y) {
+        return x * field.getNumOfCols() + y + 1;
+    }
+
+    private int getExpectedTotalAmountClauses(int row, int column) {
+        int amountClauses = 0;
+
+        amountClauses += 4 * Math.pow(2.0, 3.0);
+        amountClauses += 2 * (row - 2) * Math.pow(2.0, 5.0);
+        amountClauses += 2 * (column - 2) * Math.pow(2.0, 8.0);
+
+        return amountClauses;
+    }
+
     //Deckt das Feld (x,y) auf und ändert den Wert in fieldView[x][y] auf die entsprechende Anzahl an Minen, die um das Feld herum liegen
     private int doMove(int x, int y) {
         if (validPosition(x, y) && fieldView[x][y] == -1) {
             fieldView[x][y] = field.uncover(x, y);
+            int[] clauses = createKNF(x, y, fieldView[x][y]);
+            for (int i = 0; i < clauses.length; i++) {
+                System.out.println(clauses[i] + " ");
+            }
+            addToSolver(clauses);
         }
         return fieldView[x][y];
+    }
+
+    private IConstr addToSolver(int[] clauses) {
+        IConstr c = null;
+        try {
+            c = solver.addClause(new VecInt(clauses));
+        } catch (ContradictionException e) {
+            System.out.println("Exception: Unsatisfiable due to trivial clause");
+        }
+        return c;
+    }
+
+    private int[] createKNF(int x, int y, int feedback) {
+        int[] clauses = new int[amountClauses(amountNeighbors(x, y), feedback)];
+        if (feedback != -1) {
+            for (int i = 0; i < 8; i++) {
+                if (i == feedback) continue;
+                else {
+                    //Algorithmus, um KNF für feedback Minen im Umfeld des Feldes x,y aufzustellen
+                }
+            }
+        }
+        return clauses;
+    }
+
+    private int amountNeighbors(int x, int y) {
+        if (x == 0 && (y == 0 || y == (field.getNumOfCols() - 1))
+                || y == (field.getNumOfRows() - 1) && (x == 0 || x == field.getNumOfCols() - 1)) {
+            return 3;
+        } else if (x == 0 || y == 0 || x == (field.getNumOfRows() - 1) || y == (field.getNumOfCols() - 1)) {
+            return 5;
+        } else return 8;
+    }
+
+    private int amountClauses(int amountNeighbors, int amountMines) {
+        return (int) (Math.pow(2.0, amountNeighbors) - binomial(amountNeighbors, amountMines));
+    }
+
+    private long binomial(long n, long k) {
+        if (k == 0) return 1;
+        else if (k > n) return 0;
+        else return binomial(n - 1, k - 1) + binomial(n - 1, k);
     }
 
     //Gibt ein Array zurück mit allen derzeit möglichen Zellen (RandomMove)
@@ -209,37 +309,42 @@ public class OurMSAgent extends MSAgent {
      */
     public void createTruthTable(ArrayList<Integer> variables, int numberOfBombs) {
         int numberOfVariables = variables.size();
-        String[] binarycode = new String[(int) Math.pow(2.0, numberOfVariables)];
+        String[] binaryCode = new String[(int) Math.pow(2.0, numberOfVariables)];
         int[][] truthTable = new int[(int) Math.pow(2.0, numberOfVariables)][numberOfVariables];
 
         /**
          * Somehow magic create solver here
          */
         for (int i = 0; i < (int) Math.pow(2.0, numberOfVariables); i++) {
-            binarycode[i] = Integer.toBinaryString(i);
-            while (binarycode[i].length() < numberOfVariables) {
-                binarycode[i] = "0" + binarycode[i];
+            binaryCode[i] = Integer.toBinaryString(i);
+            while (binaryCode[i].length() < numberOfVariables) {
+                binaryCode[i] = "0" + binaryCode[i];
             }
         }
-        int[] clausel;
+        int[] clause;
         int bombCounter;
         for (int i = 0; i < truthTable.length; i++) {
-            clausel = new int[numberOfVariables];
+            clause = new int[numberOfVariables];
             bombCounter = 0;
-            String strClausel;
+            String strClause;
             for (int j = 0; j < numberOfVariables; j++) {
-                truthTable[i][j] = binarycode[i].charAt(j) == '0' ? 0 : 1;
+                truthTable[i][j] = binaryCode[i].charAt(j) == '0' ? 0 : 1;
 
                 if (Integer.parseInt("" + truthTable[i][j]) == 0) {
-                    strClausel = "-" + String.valueOf(variables.get(j));
+                    strClause = "-" + String.valueOf(variables.get(j));
                     bombCounter++;
                 } else {
-                    strClausel = "" + String.valueOf(variables.get(j));
+                    strClause = "" + String.valueOf(variables.get(j));
                 }
-                clausel[j] = Integer.parseInt(strClausel);
+                clause[j] = Integer.parseInt(strClause);
             }
             if (bombCounter != numberOfBombs) {
-                // solver.addClausel(new VecInt(clausel));
+                try {
+                    solver.addClause(new VecInt(clause));
+                } catch (ContradictionException e) {
+                    System.out.println("Exception: Unsatisfiable due to trivial clause");
+                }
+
             }
         }
         variables.clear();
