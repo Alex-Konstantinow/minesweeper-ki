@@ -65,13 +65,16 @@ public class OurMSAgent extends MSAgent {
                 //Geht das gesamte Feld durch und prüft, ob dieses aufgedeckt weden kann/muss
                 for (int i = 0; i < field.getNumOfCols(); i++) {
                     for (int j = 0; i < field.getNumOfRows(); j++) {
-                        if (validPosition(i, j) && fieldView[i][j] == -1 && !sat(i, j)) {
+                        if (validPosition(i, j) && fieldView[i][j] == -1 && !isSatisfiable(i, j)) {
                             feedback = doMove(i, j);
                             secureMove = true;
                         }
-                        /*int numberOfOpenNeighbor = numberOfOpenNeighbor(i, j);
+                        if (validPosition(i, j) && fieldView[i][j] == -1 && isSatisfiable(i, j)) {
+                            mineView[i][j] = true;
+                        }
+                        /*int getNeighbors = getNeighbors(i, j);
                         int numberOfBombsInNeighborhood = getNumberOfBombsInNeighborhood(i, j);
-                        if (fieldView[i][j] != -1 && numberOfOpenNeighbor > 0) {
+                        if (fieldView[i][j] != -1 && getNeighbors > 0) {
                             createTruthTable(variables, fieldView[i][j] - numberOfBombsInNeighborhood);
                         }*/
                     }
@@ -94,7 +97,7 @@ public class OurMSAgent extends MSAgent {
         return false;
     }
 
-    private boolean sat(int x, int y) {
+    private boolean isSatisfiable(int x, int y) {
         int[] negLiteral = {-getVariableNumber(x, y)};
         IConstr c = addToSolver(negLiteral);
 
@@ -122,7 +125,8 @@ public class OurMSAgent extends MSAgent {
 
         amountClauses += 4 * Math.pow(2.0, 3.0);
         amountClauses += 2 * (row - 2) * Math.pow(2.0, 5.0);
-        amountClauses += 2 * (column - 2) * Math.pow(2.0, 8.0);
+        amountClauses += 2 * (column - 2) * Math.pow(2.0, 5.0);
+        amountClauses += (row - 2) * (column - 2) * Math.pow(2.0, 8.0);
 
         return amountClauses;
     }
@@ -132,9 +136,6 @@ public class OurMSAgent extends MSAgent {
         if (validPosition(x, y) && fieldView[x][y] == -1) {
             fieldView[x][y] = field.uncover(x, y);
             int[] clauses = createKNF(x, y, fieldView[x][y]);
-            for (int i = 0; i < clauses.length; i++) {
-                System.out.println(clauses[i] + " ");
-            }
             addToSolver(clauses);
         }
         return fieldView[x][y];
@@ -157,6 +158,8 @@ public class OurMSAgent extends MSAgent {
                 if (i == feedback) continue;
                 else {
                     //Algorithmus, um KNF für feedback Minen im Umfeld des Feldes x,y aufzustellen
+                    getNeighbors(x, y);
+                    clauses = createTruthTable(variables, feedback);
                 }
             }
         }
@@ -187,7 +190,7 @@ public class OurMSAgent extends MSAgent {
 //        viableMoves = new int[countViableCells()];
 //        for(int i = 1; i<field.getNumOfRows(); i++) {
 //            for(int j = 1; j<field.getNumOfCols(); j++) {
-//                if(validPosition(i,j) && fieldView[i][j] == -1 && sat(i,j)) {
+//                if(validPosition(i,j) && fieldView[i][j] == -1 && isSatisfiable(i,j)) {
 //                    viableMoves[i] = i*field.getNumOfCols() + j +1;
 //                }
 //            }
@@ -245,7 +248,7 @@ public class OurMSAgent extends MSAgent {
      * @param y
      * @return number of varables for the truthtable
      */
-    private int numberOfOpenNeighbor(int x, int y) {
+    private int getNeighbors(int x, int y) {
         int counter = 0;
         if (validPosition(x + 1, y + 1) && fieldView[x + 1][y + 1] != -1) {
             variables.add((x + 1) * field.getNumOfCols() + (y + 1) + 1);
@@ -307,7 +310,7 @@ public class OurMSAgent extends MSAgent {
     /**
      * Creates a Truthtable dynamically to the amount of varables.
      */
-    public void createTruthTable(ArrayList<Integer> variables, int numberOfBombs) {
+    public int[] createTruthTable(ArrayList<Integer> variables, int numberOfBombs) {
         int numberOfVariables = variables.size();
         String[] binaryCode = new String[(int) Math.pow(2.0, numberOfVariables)];
         int[][] truthTable = new int[(int) Math.pow(2.0, numberOfVariables)][numberOfVariables];
@@ -321,15 +324,13 @@ public class OurMSAgent extends MSAgent {
                 binaryCode[i] = "0" + binaryCode[i];
             }
         }
-        int[] clause;
+        int[] clause = new int[numberOfVariables];
         int bombCounter;
         for (int i = 0; i < truthTable.length; i++) {
-            clause = new int[numberOfVariables];
             bombCounter = 0;
             String strClause;
             for (int j = 0; j < numberOfVariables; j++) {
                 truthTable[i][j] = binaryCode[i].charAt(j) == '0' ? 0 : 1;
-
                 if (Integer.parseInt("" + truthTable[i][j]) == 0) {
                     strClause = "-" + String.valueOf(variables.get(j));
                     bombCounter++;
@@ -338,15 +339,8 @@ public class OurMSAgent extends MSAgent {
                 }
                 clause[j] = Integer.parseInt(strClause);
             }
-            if (bombCounter != numberOfBombs) {
-                try {
-                    solver.addClause(new VecInt(clause));
-                } catch (ContradictionException e) {
-                    System.out.println("Exception: Unsatisfiable due to trivial clause");
-                }
-
-            }
         }
         variables.clear();
+        return clause;
     }
 }
