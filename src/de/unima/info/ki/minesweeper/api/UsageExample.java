@@ -4,11 +4,8 @@ public class UsageExample {
 
 
 	public static void main(String[] args) {
-		Tuple[] t = new Tuple[8];
-		//OurMSAgent om = new OurMSAgent();
-		//om.createClauses(t);
 		// use smaller numbers for larger fields
-		int iterations = 10000;
+		int iterations = 1;
 		
 		// if you want to iterate over all of them, this might help
 		String[] fields = {
@@ -40,23 +37,20 @@ public class UsageExample {
 		
 		int success = 0;
 		for (int i = 0; i < iterations; i++) {
-
-			i++;
-			MSField f = new MSField("fields/baby3-5x5-1.txt");
+			MSField f = new MSField("fields/baby9-7x7-10.txt");
 			//RandomMSAgent agent = new RandomMSAgent();
 			OurMSAgent agent = new OurMSAgent(f.getNumOfRows(), f.getNumOfCols());
 			agent.setField(f);
 			// to see what happens in the first iteration
 			if (i == 1) agent.activateDisplay();
 			else agent.deactivateDisplay();
-		
 			boolean solved = agent.solve();
 			if (solved) {
 				success++;
 			}
 		}
 		double rate = (double)success / (double)iterations;
-		System.out.println("Erfolgsquote: " + rate);
+		System.out.println("Erfolgsquote: " + rate + " bei " + iterations + " Wiederholungen");
 		
 
 		
