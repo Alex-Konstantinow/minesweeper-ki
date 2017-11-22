@@ -33,7 +33,7 @@ public class OurMSAgent extends MSAgent {
 
     @Override
     public boolean solve() {
-        int x, y, randomMove;
+        int x, y, randomMove, runs = 0;
         int feedback = -1;
 
         boolean secureMove = false;
@@ -61,19 +61,25 @@ public class OurMSAgent extends MSAgent {
                     for (int j = 0; j < field.getNumOfRows(); j++) {
                         if (validPosition(i, j) && fieldView[i][j] == -1 && !isSatisfiable(i, j)) {
                             feedback = doMove(i, j);
-                             System.out.println(field);
-                             System.out.println("* * * * *");
+                             // System.out.println(field);
+                             // System.out.println("* * * * *");
                         }
                         if (validPosition(i, j) && fieldView[i][j] == -1 && isSatisfiable(i, j)) {
                             // mineView[i][j] = true;
-                            System.out.println("not today bijatch\n* * * * *");
+                            // System.out.println("not today bijatch\n* * * * *");
                         }
                     }
                 }
             }
+            if(runs == 20){
+                return false;
+            }
+            else {
+                runs++;
+            }
 
         } while (feedback >= 0 && !field.solved());
-
+        System.out.println(field);
         return field.solved();
     }
 
@@ -83,7 +89,6 @@ public class OurMSAgent extends MSAgent {
         boolean satisfied = false;
 
         try {
-            System.out.println(solver.nConstraints());
             c = solver.addClause(new VecInt(negLiteral));
 
             IProblem problem = solver;
