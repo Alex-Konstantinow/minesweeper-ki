@@ -4,7 +4,7 @@ import org.sat4j.core.VecInt;
 import org.sat4j.minisat.SolverFactory;
 import org.sat4j.specs.*;
 
-import java.util.ArrayList;
+import java.util.*;
 import java.util.logging.Logger;
 
 public class OurMSAgent extends MSAgent {
@@ -18,6 +18,7 @@ public class OurMSAgent extends MSAgent {
     private boolean firstDecision = true;
 
     private ArrayList<Integer> variables = new ArrayList<>();
+    private HashMap<Integer, ArrayList<Integer>> neighboursOfVariables = new HashMap<>();
 
     ISolver solver;
 
@@ -50,7 +51,6 @@ public class OurMSAgent extends MSAgent {
 
         do {
             moveDone = false;
-            if (displayActivated) System.out.println(field);
             if (firstDecision) {
                 feedback = doMove(0, 0);
                 firstDecision = false;
@@ -63,17 +63,22 @@ public class OurMSAgent extends MSAgent {
                             moveDone = true;
                         }
                         if (validPosition(i, j) && fieldView[i][j] == -1 && isSatisfiable(i, j)) {
-                            mineView[i][j] = true;
+
                         }
                     }
                 }
                 if (!moveDone) {
-                    System.out.println(field);
-                    // doRandomMove
-                    break;
+
+                    int randVar = doRandomMove() - 1;
+                    if(randVar >= 0) {
+                        // System.out.println("Mache Zufallszug auf: " + randVar % field.getNumOfCols() + ", " + randVar / field.getNumOfCols());
+                        feedback = doMove(randVar % field.getNumOfCols(),randVar / field.getNumOfCols());
+                    }
                 }
             }
+            System.out.println("...");
         } while (feedback >= 0 && !field.solved());
+        System.out.println(field);
         return field.solved();
     }
 
@@ -83,22 +88,22 @@ public class OurMSAgent extends MSAgent {
 
         try {
             c = solver.addClause(new VecInt(negLiteral));
-
             IProblem problem = solver;
             if (problem.isSatisfiable()) {
-                solver.removeConstr(c);
+                if(c != null) {
+                    solver.removeConstr(c);
+                }
                 return true;
             } else {
-                solver.removeConstr(c);
+                if(c != null) {
+                    solver.removeConstr(c);
+                }
                 return false;
             }
         } catch (TimeoutException e) {
             System.out.println("Timeout, sorry");
         } catch (ContradictionException e) {
-            System.out.println(field);
-        }
-        if (c != null) {
-            solver.removeConstr(c);
+
         }
         return false;
     }
@@ -128,35 +133,6 @@ public class OurMSAgent extends MSAgent {
             getNeighbors(x, y);
             createTruthTable(feedback);
         }
-    }
-
-    private int getNumberOfBombsInNeighborhood(int x, int y) {
-        int counter = 0;
-        if (mineView[x + 1][y + 1]) {
-            counter++;
-        }
-        if (mineView[x + 1][y]) {
-            counter++;
-        }
-        if (mineView[x + 1][y - 1]) {
-            counter++;
-        }
-        if (mineView[x][y + 1]) {
-            counter++;
-        }
-        if (mineView[x][y - 1]) {
-            counter++;
-        }
-        if (mineView[x - 1][y + 1]) {
-            counter++;
-        }
-        if (mineView[x - 1][y]) {
-            counter++;
-        }
-        if (mineView[x - 1][y - 1]) {
-            counter++;
-        }
-        return counter;
     }
 
     /**
@@ -196,6 +172,94 @@ public class OurMSAgent extends MSAgent {
         return posX + 1 + posY * field.getNumOfCols();
     }
 
+    private int doRandomMove(){
+        addNeighboursToVariables();
+        Iterator it = neighboursOfVariables.entrySet().iterator();
+        int key = 0;
+        ArrayList<Integer> value = new ArrayList<>();
+        double probability = 1.0;
+        while (it.hasNext()) {
+            Map.Entry pair = (Map.Entry)it.next();
+            double newProbability = ((double)fieldView[((int) pair.getKey() - 1) % field.getNumOfCols()]
+                    [((int) pair.getKey() - 1) / field.getNumOfCols()] -
+                    numberOfBombsDetected(((int) pair.getKey() - 1) % field.getNumOfCols() ,
+                            ((int) pair.getKey() - 1) / field.getNumOfCols())) /
+                    ((ArrayList<Integer>) pair.getValue()).size();
+            if(newProbability < probability) {
+                key = (int) pair.getKey();
+                value = (ArrayList<Integer>) pair.getValue();
+                probability = newProbability;
+            }
+            it.remove();
+        }
+
+        return makeDecision(key, value);
+    }
+
+    private int makeDecision(int key, ArrayList<Integer> value) {
+        int col, row;
+        Random randomVariable = new Random();
+        ArrayList<Integer> possibleTurns = new ArrayList<>();
+        for(int i = 0; i < value.size(); i++) {
+            col = (value.get(i) - 1) % field.getNumOfCols();
+            row = (value.get(i) - 1) / field.getNumOfCols();
+            if(!mineView[col][row]) {
+                possibleTurns.add(value.get(i));
+            }
+        }
+        if(possibleTurns.size() != 0) {
+            return possibleTurns.get(randomVariable.nextInt(possibleTurns.size()));
+        } else {
+            return -1;
+        }
+
+    }
+
+    private void addNeighboursToVariables(){
+        for(int i = 0; i < field.getNumOfCols(); i++) {
+            for(int j = 0; j < field.getNumOfRows(); j++) {
+                getNeighbors(i, j);
+                if(fieldView[i][j] > 0 && variables.size() > 0) {
+                    ArrayList<Integer> value = new ArrayList<Integer>();
+                    for(int k = 0; k < variables.size(); k++) {
+                        value.add(variables.get(k));
+                    }
+                    neighboursOfVariables.put(calculateVariableNumber(i, j), value);
+                }
+                variables.clear();
+            }
+        }
+    }
+
+    private int numberOfBombsDetected(int col, int row) {
+        int numberOfBombs = 0;
+        if(validPosition(col + 1, row + 1 ) && mineView[col + 1][ col + 1]){
+            numberOfBombs++;
+        }
+        if(validPosition(col + 1, row) && mineView[col + 1][row]){
+            numberOfBombs++;
+        }
+        if(validPosition(col + 1, row - 1) && mineView[col + 1][row - 1]){
+            numberOfBombs++;
+        }
+        if(validPosition(col, row + 1) && mineView[col][row + 1]){
+            numberOfBombs++;
+        }
+        if(validPosition(col, row - 1) && mineView[col][row - 1]){
+            numberOfBombs++;
+        }
+        if(validPosition(col - 1, row + 1) && mineView[col - 1][row + 1]){
+            numberOfBombs++;
+        }
+        if(validPosition(col - 1, row) && mineView[col - 1][row]){
+            numberOfBombs++;
+        }
+        if(validPosition(col - 1, row - 1) && mineView[col - 1][row - 1]){
+            numberOfBombs++;
+        }
+        return numberOfBombs;
+    }
+
     /**
      * Checks if the cell is at the border.
      *
@@ -222,6 +286,11 @@ public class OurMSAgent extends MSAgent {
      */
     private int[] createTruthTable(int numberOfBombs) {
         int numberOfVariables = variables.size();
+        if(numberOfBombs == numberOfVariables) {
+            for(int i = 0; i < numberOfVariables; i++) {
+                mineView[(variables.get(i) - 1) % field.getNumOfCols()][(variables.get(i) - 1) / field.getNumOfCols()] = true;
+            }
+        }
         String[] binaryCode = new String[(int) Math.pow(2.0, numberOfVariables)];
         int[][] truthTable = new int[numberOfVariables][(int) Math.pow(2.0, numberOfVariables)];
 
@@ -250,7 +319,7 @@ public class OurMSAgent extends MSAgent {
             }
             if (bombCounter != numberOfBombs) {
                 try {
-                    if (clause.length != 0) {
+                    if (clause.length != 0 && clause != null) {
                         solver.addClause(new VecInt(clause));
                     }
                 } catch (ContradictionException e) {
