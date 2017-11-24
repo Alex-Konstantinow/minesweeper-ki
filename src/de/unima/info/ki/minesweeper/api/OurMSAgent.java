@@ -1,13 +1,15 @@
 package de.unima.info.ki.minesweeper.api;
 
-import java.util.ArrayList;
-import java.util.Random;
-
+import org.sat4j.core.VecInt;
 import org.sat4j.minisat.SolverFactory;
 import org.sat4j.specs.*;
-import org.sat4j.core.VecInt;
+
+import java.util.ArrayList;
+import java.util.logging.Logger;
 
 public class OurMSAgent extends MSAgent {
+
+    private static final Logger log = Logger.getLogger(OurMSAgent.class.getName());
 
     private int[][] fieldView;
     private boolean[][] mineView;
@@ -17,96 +19,88 @@ public class OurMSAgent extends MSAgent {
 
     private ArrayList<Integer> variables = new ArrayList<>();
 
-    private Random rand = null;
-
     ISolver solver;
 
     public OurMSAgent(int row, int column) {
         initSolver(row, column);
     }
 
-    private void initSolver(int row, int column) {
+    private void initSolver(int rows, int columns) {
         solver = SolverFactory.newDefault();
-        solver.newVar(row * column);
-        solver.setExpectedNumberOfClauses(getExpectedTotalAmountClauses(row, column));
+        solver.newVar(rows * columns);
+        solver.setExpectedNumberOfClauses(getExpectedTotalAmountClauses(rows, columns));
     }
 
     @Override
     public boolean solve() {
-        int x, y, randomMove, runs = 0;
         int feedback = -1;
-
-        boolean secureMove = false;
+        boolean moveDone;
 
         fieldView = new int[field.getNumOfCols()][field.getNumOfRows()];
         mineView = new boolean[field.getNumOfCols()][field.getNumOfRows()];
 
-        //Initialisiert fieldView mit -1, da zu Beginn noch kein Feld aufgedeckt ist
         for (int i = 0; i < fieldView.length; i++) {
             for (int j = 0; j < fieldView[i].length; j++) {
                 fieldView[i][j] = -1;
-                displayActivated = true;
+
             }
         }
+
+        displayActivated = true;
+
         do {
+            moveDone = false;
             if (displayActivated) System.out.println(field);
             if (firstDecision) {
-                x = 0;
-                y = 0;
-                feedback = doMove(x, y);
+                feedback = doMove(0, 0);
                 firstDecision = false;
             } else {
-                //Geht das gesamte Feld durch und prüft, ob dieses aufgedeckt weden kann/muss
                 for (int i = 0; i < field.getNumOfCols(); i++) {
                     for (int j = 0; j < field.getNumOfRows(); j++) {
                         if (validPosition(i, j) && fieldView[i][j] == -1 && !isSatisfiable(i, j)) {
                             feedback = doMove(i, j);
-                             // System.out.println(field);
-                             // System.out.println("* * * * *");
+                            mineView[i][j] = false;
+                            moveDone = true;
                         }
                         if (validPosition(i, j) && fieldView[i][j] == -1 && isSatisfiable(i, j)) {
-                            // mineView[i][j] = true;
-                            // System.out.println("not today bijatch\n* * * * *");
+                            mineView[i][j] = true;
                         }
                     }
                 }
+                if (!moveDone) {
+                    System.out.println(field);
+                    // doRandomMove
+                    break;
+                }
             }
-            if(runs == 20){
-                return false;
-            }
-            else {
-                runs++;
-            }
-
         } while (feedback >= 0 && !field.solved());
-        System.out.println(field);
         return field.solved();
     }
 
     private boolean isSatisfiable(int x, int y) {
         int[] negLiteral = {-calculateVariableNumber(x, y)};
         IConstr c = null;
-        boolean satisfied = false;
 
         try {
             c = solver.addClause(new VecInt(negLiteral));
 
             IProblem problem = solver;
             if (problem.isSatisfiable()) {
-                satisfied = true;
+                solver.removeConstr(c);
+                return true;
             } else {
-                satisfied = false;
+                solver.removeConstr(c);
+                return false;
             }
         } catch (TimeoutException e) {
             System.out.println("Timeout, sorry");
         } catch (ContradictionException e) {
             System.out.println(field);
         }
-        if(c != null) {
+        if (c != null) {
             solver.removeConstr(c);
         }
-
-        return satisfied;
+        return false;
     }
 
     private int getExpectedTotalAmountClauses(int row, int column) {
@@ -130,32 +124,10 @@ public class OurMSAgent extends MSAgent {
     }
 
     private void createKNF(int x, int y, int feedback) {
-        int[] clauses = new int[amountClauses(amountNeighbors(x, y), feedback)];
-        // System.out.println("Anzahl Klauseln: " + clauses.length);
         if (feedback != -1) {
-                    getNeighbors(x, y);
-                    createTruthTable(feedback);
+            getNeighbors(x, y);
+            createTruthTable(feedback);
         }
-    }
-
-    private int amountNeighbors(int x, int y) {
-        if (x == 0 && (y == 0 || y == (field.getNumOfCols() - 1))
-                || y == (field.getNumOfRows() - 1) && (x == 0 || x == field.getNumOfCols() - 1)) {
-            return 3;
-        } else if (x == 0 || y == 0 || x == (field.getNumOfRows() - 1) || y == (field.getNumOfCols() - 1)) {
-            return 5;
-        } else return 8;
-    }
-
-    private int amountClauses(int amountNeighbors, int amountMines) {
-        return (int) (Math.pow(2.0, amountNeighbors) - binomial(amountNeighbors, amountMines));
-    }
-
-    private long binomial(long n, long k) {
-        // System.out.println("Nachbern: " + n + ", Bomben: " + k);
-        if (k == 0 || n == k || k == -1) return 1;
-        else if (k > n) return 0;
-        else return (n /k) * binomial(n - 1, k - 1);
     }
 
     private int getNumberOfBombsInNeighborhood(int x, int y) {
@@ -190,9 +162,8 @@ public class OurMSAgent extends MSAgent {
     /**
      * Calculates all uncovered neighbours of an covered field.
      *
-     * @param x
-     * @param y
-     * @return number of varables for the truthtable
+     * @param x row position
+     * @param y column position
      */
     private void getNeighbors(int x, int y) {
         if (validPosition(x + 1, y + 1) && fieldView[x + 1][y + 1] == -1) {
@@ -228,8 +199,8 @@ public class OurMSAgent extends MSAgent {
     /**
      * Checks if the cell is at the border.
      *
-     * @param x
-     * @param y
+     * @param x position of row
+     * @param y position of column
      * @return true if its not at the border
      */
     private boolean validPosition(int x, int y) {
@@ -249,9 +220,8 @@ public class OurMSAgent extends MSAgent {
     /**
      * Creates a Truthtable dynamically to the amount of varables.
      */
-    public int[] createTruthTable(int numberOfBombs) {
+    private int[] createTruthTable(int numberOfBombs) {
         int numberOfVariables = variables.size();
-        // System.out.println("Anz. Nachbarn: " + numberOfVariables);
         String[] binaryCode = new String[(int) Math.pow(2.0, numberOfVariables)];
         int[][] truthTable = new int[numberOfVariables][(int) Math.pow(2.0, numberOfVariables)];
 
@@ -270,35 +240,25 @@ public class OurMSAgent extends MSAgent {
             for (int j = 0; j < numberOfVariables; j++) {
                 truthTable[j][i] = binaryCode[i].charAt(j) == '0' ? 0 : 1;
                 if (Integer.parseInt("" + truthTable[j][i]) == 0 /*|| mineView[(variables.get(j) - 1) / field.getNumOfCols()][(variables.get(j) - 1) % field.getNumOfCols()]*/) {
-                    strClause = "-" + String.valueOf(variables.get(j));
+                    strClause = "-" + variables.get(j);
 
                 } else {
-                    strClause = "" + String.valueOf(variables.get(j));
+                    strClause = "" + variables.get(j);
                     bombCounter++;
                 }
                 clause[j] = Integer.parseInt(strClause);
             }
-            if(bombCounter != numberOfBombs) {
+            if (bombCounter != numberOfBombs) {
                 try {
-                    if(clause.length != 0 && clause != null) {
-                        // printClauses(clause);
+                    if (clause.length != 0) {
                         solver.addClause(new VecInt(clause));
                     }
                 } catch (ContradictionException e) {
-                    // printClauses(clause);
                     System.out.println("Empty Constrain?!?");
                 }
             }
         }
         variables.clear();
         return clause;
-    }
-
-    private void printClauses(int[] clauses) {
-        System.out.print("Klauseln: ");
-        for(int i = 0; i < clauses.length; i++) {
-            System.out.print(clauses[i] + " ");
-        }
-        System.out.println();
     }
 }

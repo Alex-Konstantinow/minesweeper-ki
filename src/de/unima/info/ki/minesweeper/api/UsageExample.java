@@ -6,7 +6,7 @@ public class UsageExample {
 	public static void main(String[] args) {
 		// use smaller numbers for larger fields
 		int iterations = 1;
-		int chosenField = 21;
+		int chosenField = 0;
 		
 		// if you want to iterate over all of them, this might help
 		String[] fields = {
@@ -52,11 +52,6 @@ public class UsageExample {
 		}
 		double rate = (double)success / (double)iterations;
 		System.out.println("Erfolgsquote: " + rate + " bei " + iterations + " Wiederholungen für das feld " + fields[chosenField]);
-		
-
-		
-
-		
 	}
 
 }
