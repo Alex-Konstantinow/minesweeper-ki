@@ -34,17 +34,7 @@ public class OurMSAgent extends MSAgent {
     public boolean solve() {
         int feedback = -1;
         boolean moveDone;
-
-        fieldView = new int[field.getNumOfCols()][field.getNumOfRows()];
-        mineView = new boolean[field.getNumOfCols()][field.getNumOfRows()];
-
-        for (int i = 0; i < fieldView.length; i++) {
-            for (int j = 0; j < fieldView[i].length; j++) {
-                fieldView[i][j] = -1;
-
-            }
-        }
-
+        initFieldView();
         do {
             moveDone = false;
             if (firstDecision) {
@@ -56,22 +46,28 @@ public class OurMSAgent extends MSAgent {
                         if (validPosition(i, j) && fieldView[i][j] == -1 && !isSatisfiable(i, j)) {
                             feedback = doMove(i, j);
                             moveDone = true;
-
                         }
                     }
                 }
-                // System.out.println(field);
                 if (!moveDone) {
-                    int randVar = doRandomMove() - 1;
-                    // System.out.println(randVar);
-                    if (randVar >= 0) {
-                        feedback = doMove(randVar % field.getNumOfCols(), randVar / field.getNumOfCols());
-                    }
+                        feedback = doRandomMove();
                 }
             }
         } while (feedback >= 0 && !field.solved());
         System.out.println(field);
         return field.solved();
+    }
+
+    private void initFieldView(){
+        fieldView = new int[field.getNumOfCols()][field.getNumOfRows()];
+        mineView = new boolean[field.getNumOfCols()][field.getNumOfRows()];
+
+        for (int i = 0; i < fieldView.length; i++) {
+            for (int j = 0; j < fieldView[i].length; j++) {
+                fieldView[i][j] = -1;
+
+            }
+        }
     }
 
     private boolean isSatisfiable(int x, int y) {
@@ -94,6 +90,7 @@ public class OurMSAgent extends MSAgent {
         } catch (TimeoutException e) {
             System.out.println("Timeout, sorry");
         } catch (ContradictionException e) {
+            // e.printStackTrace();
         }
         return false;
     }
@@ -142,7 +139,7 @@ public class OurMSAgent extends MSAgent {
     }
 
     private void addNeighbour(int col, int row){
-        if (validPosition(col, row) && fieldView[col][row] == -1) {
+        if (validPosition(col, row) && fieldView[col][row] == -1 && !mineView[col][row]) {
             variables.add(calculateVariableNumber(col, row));
         }
     }
@@ -162,23 +159,38 @@ public class OurMSAgent extends MSAgent {
             ArrayList<Integer> value = entry.getValue();
             int col = (key - 1) % cols;
             int row = (key - 1) / cols;
-            newProbability = ((double) fieldView[col][row] - numberOfBombsDetected(col, row)) / value.size();
+            newProbability = ((double) fieldView[col][row]) / value.size();
             if(0.0 < newProbability && newProbability < probability) {
                 bestProbabilityValue = value;
                 probability = newProbability;
             }
         }
-        return makeDecision(bestProbabilityValue);
+        int randVar = makeDecision(bestProbabilityValue) - 1;
+        int col = randVar % field.getNumOfCols();
+        int row = randVar / field.getNumOfCols();
+        int[] clause = {calculateVariableNumber(col, row)};
+        if (fieldView[col][row] == -1) {
+            fieldView[col][row] = field.uncover(col, row);
+            try {
+                solver.addClause(new VecInt(clause));
+            } catch (ContradictionException e) {
+                // e.printStackTrace();
+            }
+            createKNF(col, row, fieldView[col][row]);
+            System.out.println(field);
+        }
+        return fieldView[col][row];
     }
 
     private int makeDecision(ArrayList<Integer> value) {
         int col;
         int row;
+        int cols = field.getNumOfCols();
         Random randomVariable = new Random();
         ArrayList<Integer> possibleTurns = new ArrayList<>();
         for(int variableNumber : value) {
-            col = (variableNumber - 1) % field.getNumOfCols();
-            row = (variableNumber - 1) / field.getNumOfCols();
+            col = (variableNumber - 1) % cols;
+            row = (variableNumber - 1) / cols;
             if (!mineView[col][row]) {
                 possibleTurns.add(variableNumber);
             }
@@ -196,43 +208,18 @@ public class OurMSAgent extends MSAgent {
         for (int i = 0; i < field.getNumOfCols(); i++) {
             for (int j = 0; j < field.getNumOfRows(); j++) {
                 getNeighbors(i, j);
-                if (fieldView[i][j] > 0 && !variables.isEmpty() && fieldView[i][j] != variables.size()) {
-                    ArrayList<Integer> value = new ArrayList<>();
-                    value.addAll(variables);
-                    neighboursOfVariables.put(calculateVariableNumber(i, j), value);
+                if (fieldView[i][j] > 0 && !variables.isEmpty()) {
+                    if(fieldView[i][j] != variables.size()) {
+                        ArrayList<Integer> value = new ArrayList<>();
+                        value.addAll(variables);
+                        neighboursOfVariables.put(calculateVariableNumber(i, j), value);
+                    } else {
+                        flagBombs();
+                    }
                 }
                 variables.clear();
             }
         }
-    }
-
-    private int numberOfBombsDetected(int col, int row) {
-        int numberOfBombs = 0;
-        if (validPosition(col + 1, row + 1) && mineView[col + 1][col + 1]) {
-            numberOfBombs++;
-        }
-        if (validPosition(col + 1, row) && mineView[col + 1][row]) {
-            numberOfBombs++;
-        }
-        if (validPosition(col + 1, row - 1) && mineView[col + 1][row - 1]) {
-            numberOfBombs++;
-        }
-        if (validPosition(col, row + 1) && mineView[col][row + 1]) {
-            numberOfBombs++;
-        }
-        if (validPosition(col, row - 1) && mineView[col][row - 1]) {
-            numberOfBombs++;
-        }
-        if (validPosition(col - 1, row + 1) && mineView[col - 1][row + 1]) {
-            numberOfBombs++;
-        }
-        if (validPosition(col - 1, row) && mineView[col - 1][row]) {
-            numberOfBombs++;
-        }
-        if (validPosition(col - 1, row - 1) && mineView[col - 1][row - 1]) {
-            numberOfBombs++;
-        }
-        return numberOfBombs;
     }
 
     /**
@@ -261,44 +248,52 @@ public class OurMSAgent extends MSAgent {
      */
     private void createTruthTable(int numberOfBombs) {
         int numberOfVariables = variables.size();
-        flagBombs(numberOfBombs, numberOfVariables);
-        String[] binaryCode = generateBinaryCode(numberOfVariables);
+        if (numberOfBombs == numberOfVariables) {
+            flagBombs();
+        } else {
+            String[] binaryCode = generateBinaryCode(numberOfVariables);
 
-        int[][] truthTable = new int[numberOfVariables][(int) Math.pow(2.0, numberOfVariables)];
-        int[] clause = new int[numberOfVariables];
-        int bombCounter;
-        StringBuilder strClause;
-        StringBuilder check;
+            int[][] truthTable = new int[numberOfVariables][(int) Math.pow(2.0, numberOfVariables)];
+            int[] clause = new int[numberOfVariables];
+            int bombCounter;
+            StringBuilder strClause;
+            StringBuilder check;
 
-        for (int i = 0; i < binaryCode.length; i++) {
-            bombCounter = 0;
-            for (int j = 0; j < numberOfVariables; j++) {
-                strClause = new StringBuilder("");
-                check = new StringBuilder("");
-                truthTable[j][i] = binaryCode[i].charAt(j) == '0' ? 0 : 1;
-                if (Integer.parseInt(check.append(truthTable[j][i]).toString()) == 0) {
-                    strClause.append("-");
-                    strClause.append(variables.get(j));
+            for (int i = 0; i < binaryCode.length; i++) {
+                bombCounter = 0;
+                for (int j = 0; j < numberOfVariables; j++) {
+                    strClause = new StringBuilder("");
+                    check = new StringBuilder("");
+                    truthTable[j][i] = binaryCode[i].charAt(j) == '0' ? 0 : 1;
+                    if (Integer.parseInt(check.append(truthTable[j][i]).toString()) == 0) {
+                        strClause.append("-");
+                        strClause.append(variables.get(j));
 
-                } else {
-                    strClause.append(variables.get(j));
-                    bombCounter++;
+                    } else {
+                        strClause.append(variables.get(j));
+                        bombCounter++;
+                    }
+                    clause[j] = Integer.parseInt(strClause.toString());
                 }
-                clause[j] = Integer.parseInt(strClause.toString());
-            }
-            if (bombCounter != numberOfBombs) {
-                addClauseToSolver(clause);
+                if (bombCounter != numberOfBombs) {
+                    addClauseToSolver(clause);
+                }
             }
         }
         variables.clear();
     }
 
-    private void flagBombs(int numberOfBombs, int numberOfVariables){
-        if (numberOfBombs == numberOfVariables) {
+    private void flagBombs(){
+            int[] bombs = new int[1];
             for (int variable : variables) {
-                mineView[(variable - 1) % field.getNumOfCols()][(variable - 1) / field.getNumOfCols()] = true;
+                bombs[0] = -variable;
+                try {
+                    solver.addClause(new VecInt(bombs));
+                } catch (ContradictionException e) {
+                    // e.printStackTrace();
+                }
             }
-        }
+
     }
 
     private String[] generateBinaryCode(int numberOfVariables) {
