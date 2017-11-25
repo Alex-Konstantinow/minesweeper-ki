@@ -272,7 +272,6 @@ public class OurMSAgent extends MSAgent {
             }
             return fieldView[col][row];
         }
-
     }
 
     /**
