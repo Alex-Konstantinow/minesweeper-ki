@@ -1,5 +1,7 @@
 package de.unima.info.ki.minesweeper.api;
 
+import java.awt.*;
+
 public class UsageExample {
 
 
@@ -7,8 +9,8 @@ public class UsageExample {
 		long startTime;
 		long endTime;
 		// use smaller numbers for larger fields
-		int iterations = 10000;
-		int chosenField = 13;
+		int iterations = 1000;
+		int chosenField = 18;
 		
 		// if you want to iterate over all of them, this might help
 		String[] fields = {
@@ -41,6 +43,7 @@ public class UsageExample {
 		int success = 0;
 		startTime = System.currentTimeMillis();
 		for (int i = 0; i < iterations; i++) {
+			System.out.println("Durchgang: " + i);
 			MSField f = new MSField("fields/" + fields[chosenField]);
 			OurMSAgent agent = new OurMSAgent(f.getNumOfRows(), f.getNumOfCols());
 			agent.setField(f);
@@ -52,6 +55,7 @@ public class UsageExample {
 				success++;
 			}
 		}
+		Toolkit.getDefaultToolkit().beep();
 		double rate = (double)success / (double)iterations;
 		endTime = System.currentTimeMillis();
 		System.out.println(endTime - startTime + "ms");
