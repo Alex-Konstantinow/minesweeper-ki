@@ -30,9 +30,9 @@ public class UsageExample {
 			"baby9-7x7-10.txt",//13 nicht geschafft -> bei 10000 Iterationen 50.26% gelöst 127.627s gebraucht
 			"fortgeschrittene1-16x16-40.txt",//14 geschafft 100% -> bei 100 Iterationen 32.619s gebraucht
 			"fortgeschrittene2-16x16-40.txt",//15 nicht geschafft -> bei 100 Iterationen 17.0% gelöst 24.897s gebraucht
-			"fortgeschrittene3-16x16-40.txt",//16 nicht geschafft -> bei 100 Iterationen 60.0% gelöst 38.712s gebraucht
+			"fortgeschrittene3-16x16-40.txt",//16 nicht geschafft -> bei 1000 Iterationen 60.0% gelöst 38.712s gebraucht
 			"fortgeschrittene4-16x16-40.txt",//17 nicht geschafft -> bei 1000 Iterationen 53.2% gelöst 440.445s gebraucht
-			"fortgeschrittene5-16x16-40.txt",//18 nicht geschafft -> bei 100 Iterationen 0.0% gelöst 65.027s gebraucht
+			"fortgeschrittene5-16x16-40.txt",//18 nicht geschafft -> bei 1000 Iterationen 0.0% gelöst 65.027s gebraucht
 			"profi1-30x16-99.txt",//19 nicht geschafft -> bei 10 Iterationen 0.0% gelöst 10.410s gebraucht
 			"profi2-30x16-99.txt",//20 nicht geschafft -> bei 10 Iterationen 40.0% gelöst 59798s gebraucht
 			"profi3-30x16-99.txt",//21 nicht geschafft -> bei 10 Iterationen 60.0% gelöst 45.928s gebraucht

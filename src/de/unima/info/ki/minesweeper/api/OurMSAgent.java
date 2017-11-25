@@ -244,7 +244,7 @@ public class OurMSAgent extends MSAgent {
                 probability = newProbability;
             }
         }
-        if(probability >= 0.5 && (double) numberOfFields / (field.getNumOfRows() * field.getNumOfCols()) >= 0.3) {
+        if(probability >= 0.5) {
             return makeFullyRandomMove();
         } else {
             int randVar = makeDecision(bestProbabilityValue) - 1;
