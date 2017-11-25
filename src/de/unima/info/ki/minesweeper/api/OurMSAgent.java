@@ -4,7 +4,10 @@ import org.sat4j.core.VecInt;
 import org.sat4j.minisat.SolverFactory;
 import org.sat4j.specs.*;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Random;
 
 public class OurMSAgent extends MSAgent {
 
@@ -42,6 +45,7 @@ public class OurMSAgent extends MSAgent {
 
     /**
      * Generating all combinations of Binarycodes depending on the amount of variables.
+     *
      * @param numberOfVariables are representing the possible neighbours of a field
      * @return the binarycodes as an String Array
      */
@@ -58,7 +62,8 @@ public class OurMSAgent extends MSAgent {
 
     /**
      * Initializing the SAT-Solver.
-     * @param rows number of rows on the field
+     *
+     * @param rows    number of rows on the field
      * @param columns number of columns of the field
      */
     private void initSolver(int rows, int columns) {
@@ -109,8 +114,9 @@ public class OurMSAgent extends MSAgent {
 
     /**
      * Adding a negate clausel to the knowledgebase of the SAT solver to test if the clausels are satisfiable.
+     *
      * @param column column position of the move to be checked
-     * @param row row position of the move to be checked
+     * @param row    row position of the move to be checked
      * @return false means that the move can be done, true means that we haven´t enougth knowledge to do this move
      */
     private boolean isSatisfiable(int column, int row) {
@@ -140,7 +146,8 @@ public class OurMSAgent extends MSAgent {
 
     /**
      * To initialize the SAT solver this method calculates the total possible amount of clauses.
-     * @param row number of rows on the field
+     *
+     * @param row    number of rows on the field
      * @param column number of columns on the field
      * @return maximum amount of clauses
      */
@@ -157,8 +164,9 @@ public class OurMSAgent extends MSAgent {
 
     /**
      * if the desired cell is covered we will uncover it and update the knowledgebase.
+     *
      * @param column column position of the uncovered cell
-     * @param row row position of the uncovered cell
+     * @param row    row position of the uncovered cell
      * @return the number of bombs in neighbourhood
      */
     private int doMove(int column, int row) {
@@ -171,8 +179,9 @@ public class OurMSAgent extends MSAgent {
 
     /**
      * Generating the KNF from an uncovered cell.
-     * @param column column position of the uncovered cell
-     * @param row row position of the uncovered cell
+     *
+     * @param column   column position of the uncovered cell
+     * @param row      row position of the uncovered cell
      * @param feedback number of bombs in neighbourhood of the uncovered cell
      */
     private void createKNF(int column, int row, int feedback) {
@@ -201,8 +210,9 @@ public class OurMSAgent extends MSAgent {
 
     /**
      * Adding the Neighbour to the variables needed for the KNF.
+     *
      * @param column column position neighbour
-     * @param row row position of the neighbour
+     * @param row    row position of the neighbour
      */
     private void addNeighbour(int column, int row) {
         if (validPosition(column, row) && fieldView[column][row] == -1) {
@@ -212,8 +222,9 @@ public class OurMSAgent extends MSAgent {
 
     /**
      * Helping to calculate the variablenumber from the position on field.
+     *
      * @param column column position of the cell on field
-     * @param row row position of the cell on field
+     * @param row    row position of the cell on field
      * @return variablenumber
      */
     private int calculateVariableNumber(int column, int row) {
@@ -222,6 +233,7 @@ public class OurMSAgent extends MSAgent {
 
     /**
      * In case we cant do a save move anymore we have to do a random move with the best probability.
+     *
      * @return number of bombs in neighbourhood of the uncovered cell
      */
     private int doRandomMove() {
@@ -241,7 +253,7 @@ public class OurMSAgent extends MSAgent {
                 probability = newProbability;
             }
         }
-        if(probability >= 0.5) {
+        if (probability >= 0.5) {
             return makeFullyRandomMove();
         } else {
             int randVar = makeDecision(bestProbabilityValue) - 1;
@@ -266,13 +278,14 @@ public class OurMSAgent extends MSAgent {
     /**
      * In case that the field position is very bad and we will do in any case a bad turn we will better try to find a
      * better position to play.
+     *
      * @return random move
      */
-    private int makeFullyRandomMove(){
+    private int makeFullyRandomMove() {
         Random random = new Random();
         boolean moveDone = false;
         int feedback = -1;
-        while(!moveDone) {
+        while (!moveDone) {
             int col = random.nextInt(field.getNumOfCols());
             int row = random.nextInt(field.getNumOfRows());
             if (fieldView[col][row] == -1) {
@@ -294,6 +307,7 @@ public class OurMSAgent extends MSAgent {
 
     /**
      * Generating a random turn with the potentail best chance of not finding a bomb.
+     *
      * @param value random selection is done from this List of variables
      * @return a random move
      */
@@ -334,7 +348,7 @@ public class OurMSAgent extends MSAgent {
      * Checks if the cell is at the border.
      *
      * @param column column position of the cell on field
-     * @param row row position of the cell on field
+     * @param row    row position of the cell on field
      * @return true if its not at the border
      */
     private boolean validPosition(int column, int row) {
@@ -405,6 +419,7 @@ public class OurMSAgent extends MSAgent {
 
     /**
      * adding a clause to the SAT solver knowledgbase.
+     *
      * @param clause the new clause
      */
     private void addClauseToSolver(int[] clause) {
