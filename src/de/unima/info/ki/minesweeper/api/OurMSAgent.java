@@ -8,22 +8,60 @@ import java.util.*;
 
 public class OurMSAgent extends MSAgent {
 
+    private static final int MAX_NUMBER_OF_VARIABLES = 8;
+
+    private static boolean initialized;
+    private static HashMap<Integer, String[]> binaryCode = new HashMap<>();
 
     private int[][] fieldView;
-    private boolean[][] mineView;
 
     private boolean firstDecision = true;
     private boolean displayActivated;
+    private int numberOfFields;
 
     private ArrayList<Integer> variables = new ArrayList<>();
-    private Map<Integer, ArrayList<Integer>> neighboursOfVariables = new HashMap<>();
+    private HashMap<Integer, ArrayList<Integer>> neighboursOfVariables = new HashMap<>();
 
     private ISolver solver;
 
     public OurMSAgent(int row, int column) {
         initSolver(row, column);
+        if (!initialized) {
+            initBinaryCode();
+            initialized = true;
+        }
     }
 
+    /**
+     * Initializing the binayrycode Map depending on the amount of variables.
+     */
+    private void initBinaryCode() {
+        for (int i = 1; i <= MAX_NUMBER_OF_VARIABLES; i++) {
+            binaryCode.put(i, generateBinaryCode(i));
+        }
+    }
+
+    /**
+     * Generating all combinations of Binarycodes depending on the amount of variables.
+     * @param numberOfVariables are representing the possible neighbours of a field
+     * @return the binarycodes as an String Array
+     */
+    private String[] generateBinaryCode(int numberOfVariables) {
+        String[] binaryCode = new String[(int) Math.pow(2.0, numberOfVariables)];
+        for (int i = 0; i < (int) Math.pow(2.0, numberOfVariables); i++) {
+            binaryCode[i] = Integer.toBinaryString(i);
+            while (binaryCode[i].length() < numberOfVariables) {
+                binaryCode[i] = "0" + binaryCode[i];
+            }
+        }
+        return binaryCode;
+    }
+
+    /**
+     * Initializing the SAT-Solver.
+     * @param rows number of rows on the field
+     * @param columns number of columns of the field
+     */
     private void initSolver(int rows, int columns) {
         solver = SolverFactory.newDefault();
         solver.newVar(rows * columns);
@@ -50,7 +88,7 @@ public class OurMSAgent extends MSAgent {
                     }
                 }
                 if (!moveDone) {
-                        feedback = doRandomMove();
+                    feedback = doRandomMove();
                 }
             }
         } while (feedback >= 0 && !field.solved());
@@ -58,20 +96,27 @@ public class OurMSAgent extends MSAgent {
         return field.solved();
     }
 
-    private void initFieldView(){
+    /**
+     * Initializes every cell of the field with -1 (covered).
+     */
+    private void initFieldView() {
         fieldView = new int[field.getNumOfCols()][field.getNumOfRows()];
-        mineView = new boolean[field.getNumOfCols()][field.getNumOfRows()];
-
+        numberOfFields = field.getNumOfCols() * field.getNumOfRows();
         for (int i = 0; i < fieldView.length; i++) {
             for (int j = 0; j < fieldView[i].length; j++) {
                 fieldView[i][j] = -1;
-
             }
         }
     }
 
-    private boolean isSatisfiable(int x, int y) {
-        int[] negLiteral = {-calculateVariableNumber(x, y)};
+    /**
+     * Adding a negate clausel to the knowledgebase of the SAT solver to test if the clausels are satisfiable.
+     * @param column column position of the move to be checked
+     * @param row row position of the move to be checked
+     * @return false means that the move can be done, true means that we haven´t enougth knowledge to do this move
+     */
+    private boolean isSatisfiable(int column, int row) {
+        int[] negLiteral = {-calculateVariableNumber(column, row)};
         IConstr c;
         try {
             c = solver.addClause(new VecInt(negLiteral));
@@ -95,6 +140,12 @@ public class OurMSAgent extends MSAgent {
         return false;
     }
 
+    /**
+     * To initialize the SAT solver this method calculates the total possible amount of clauses.
+     * @param row number of rows on the field
+     * @param column number of columns on the field
+     * @return maximum amount of clauses
+     */
     private int getExpectedTotalAmountClauses(int row, int column) {
         int amountClauses = 0;
 
@@ -106,23 +157,36 @@ public class OurMSAgent extends MSAgent {
         return amountClauses;
     }
 
-    private int doMove(int x, int y) {
-        if (fieldView[x][y] == -1) {
-            fieldView[x][y] = field.uncover(x, y);
-            createKNF(x, y, fieldView[x][y]);
+    /**
+     * if the desired cell is covered we will uncover it and update the knowledgebase.
+     * @param column column position of the uncovered cell
+     * @param row row position of the uncovered cell
+     * @return the number of bombs in neighbourhood
+     */
+    private int doMove(int column, int row) {
+        if (fieldView[column][row] == -1) {
+            fieldView[column][row] = field.uncover(column, row);
+            createKNF(column, row, fieldView[column][row]);
+            numberOfFields--;
         }
-        return fieldView[x][y];
+        return fieldView[column][row];
     }
 
-    private void createKNF(int x, int y, int feedback) {
+    /**
+     * Generating the KNF from an uncovered cell.
+     * @param column column position of the uncovered cell
+     * @param row row position of the uncovered cell
+     * @param feedback number of bombs in neighbourhood of the uncovered cell
+     */
+    private void createKNF(int column, int row, int feedback) {
         if (feedback != -1) {
-            getNeighbors(x, y);
+            getNeighbors(column, row);
             createTruthTable(feedback);
         }
     }
 
     /**
-     * Calculates all uncovered neighbours of an covered field.
+     * Calculates all uncovered neighbours of a cell.
      *
      * @param x row position
      * @param y column position
@@ -138,18 +202,33 @@ public class OurMSAgent extends MSAgent {
         addNeighbour(x - 1, y - 1);
     }
 
-    private void addNeighbour(int col, int row){
-        if (validPosition(col, row) && fieldView[col][row] == -1 && !mineView[col][row]) {
-            variables.add(calculateVariableNumber(col, row));
+    /**
+     * Adding the Neighbour to the variables needed for the KNF.
+     * @param column column position neighbour
+     * @param row row position of the neighbour
+     */
+    private void addNeighbour(int column, int row) {
+        if (validPosition(column, row) && fieldView[column][row] == -1) {
+            variables.add(calculateVariableNumber(column, row));
         }
     }
 
-    private int calculateVariableNumber(int posX, int posY) {
-        return posX + 1 + posY * field.getNumOfCols();
+    /**
+     * Helping to calculate the variablenumber from the position on field.
+     * @param column column position of the cell on field
+     * @param row row position of the cell on field
+     * @return variablenumber
+     */
+    private int calculateVariableNumber(int column, int row) {
+        return column + 1 + row * field.getNumOfCols();
     }
 
+    /**
+     * In case we cant do a save move anymore we have to do a random move with the best probability.
+     * @return number of bombs in neighbourhood of the uncovered cell
+     */
     private int doRandomMove() {
-        addNeighboursToVariables();
+        mapNeighboursToVariables();
         ArrayList<Integer> bestProbabilityValue = new ArrayList<>();
         double probability = 1.0;
         double newProbability;
@@ -160,56 +239,90 @@ public class OurMSAgent extends MSAgent {
             int col = (key - 1) % cols;
             int row = (key - 1) / cols;
             newProbability = ((double) fieldView[col][row]) / value.size();
-            if(0.0 < newProbability && newProbability < probability) {
+            if (0.0 < newProbability && newProbability < probability) {
                 bestProbabilityValue = value;
                 probability = newProbability;
             }
         }
-        int randVar = makeDecision(bestProbabilityValue) - 1;
-        int col = randVar % field.getNumOfCols();
-        int row = randVar / field.getNumOfCols();
-        int[] clause = {calculateVariableNumber(col, row)};
-        if (fieldView[col][row] == -1) {
-            fieldView[col][row] = field.uncover(col, row);
-            try {
-                solver.addClause(new VecInt(clause));
-            } catch (ContradictionException e) {
-                // e.printStackTrace();
+        if(probability >= 0.5 && (double) numberOfFields / (field.getNumOfRows() * field.getNumOfCols()) >= 0.3) {
+            return makeFullyRandomMove();
+        } else {
+            int randVar = makeDecision(bestProbabilityValue) - 1;
+            int col = randVar % field.getNumOfCols();
+            int row = randVar / field.getNumOfCols();
+            int[] clause = {calculateVariableNumber(col, row)};
+            if (fieldView[col][row] == -1) {
+                fieldView[col][row] = field.uncover(col, row);
+                try {
+                    solver.addClause(new VecInt(clause));
+                } catch (ContradictionException e) {
+                    // e.printStackTrace();
+                }
+                createKNF(col, row, fieldView[col][row]);
+                System.out.println(field);
+                numberOfFields--;
             }
-            createKNF(col, row, fieldView[col][row]);
-            System.out.println(field);
+            return fieldView[col][row];
         }
-        return fieldView[col][row];
+
     }
 
-    private int makeDecision(ArrayList<Integer> value) {
-        int col;
-        int row;
-        int cols = field.getNumOfCols();
-        Random randomVariable = new Random();
-        ArrayList<Integer> possibleTurns = new ArrayList<>();
-        for(int variableNumber : value) {
-            col = (variableNumber - 1) % cols;
-            row = (variableNumber - 1) / cols;
-            if (!mineView[col][row]) {
-                possibleTurns.add(variableNumber);
+    /**
+     * In case that the field position is very bad and we will do in any case a bad turn we will better try to find a
+     * better position to play.
+     * @return random move
+     */
+    private int makeFullyRandomMove(){
+        Random random = new Random();
+        boolean moveDone = false;
+        int feedback = -1;
+        while(!moveDone) {
+            int col = random.nextInt(field.getNumOfCols());
+            int row = random.nextInt(field.getNumOfRows());
+            if (fieldView[col][row] == -1) {
+                int[] clause = {calculateVariableNumber(col, row)};
+                fieldView[col][row] = field.uncover(col, row);
+                feedback = fieldView[col][row];
+                try {
+                    solver.addClause(new VecInt(clause));
+                } catch (ContradictionException e) {
+                    // e.printStackTrace();
+                }
+                createKNF(col, row, fieldView[col][row]);
+                System.out.println(field);
+                numberOfFields--;
+                moveDone = true;
             }
         }
+        return feedback;
+    }
+
+    /**
+     * Generating a random turn with the potentail best chance of not finding a bomb.
+     * @param value random selection is done from this List of variables
+     * @return a random move
+     */
+    private int makeDecision(ArrayList<Integer> value) {
+        Random randomVariable = new Random();
+        ArrayList<Integer> possibleTurns = new ArrayList<>();
+        possibleTurns.addAll(value);
         if (!possibleTurns.isEmpty()) {
             return possibleTurns.get(randomVariable.nextInt(possibleTurns.size()));
         } else {
-
             return -1;
         }
 
     }
 
-    private void addNeighboursToVariables() {
+    /**
+     * Mapping Neighbours to variables.
+     */
+    private void mapNeighboursToVariables() {
         for (int i = 0; i < field.getNumOfCols(); i++) {
             for (int j = 0; j < field.getNumOfRows(); j++) {
                 getNeighbors(i, j);
                 if (fieldView[i][j] > 0 && !variables.isEmpty()) {
-                    if(fieldView[i][j] != variables.size()) {
+                    if (fieldView[i][j] != variables.size()) {
                         ArrayList<Integer> value = new ArrayList<>();
                         value.addAll(variables);
                         neighboursOfVariables.put(calculateVariableNumber(i, j), value);
@@ -225,12 +338,12 @@ public class OurMSAgent extends MSAgent {
     /**
      * Checks if the cell is at the border.
      *
-     * @param x position of row
-     * @param y position of column
+     * @param column column position of the cell on field
+     * @param row row position of the cell on field
      * @return true if its not at the border
      */
-    private boolean validPosition(int x, int y) {
-        return (x >= 0 && x < field.getNumOfCols() && y >= 0 && y < field.getNumOfRows());
+    private boolean validPosition(int column, int row) {
+        return (column >= 0 && column < field.getNumOfCols() && row >= 0 && row < field.getNumOfRows());
     }
 
     @Override
@@ -251,24 +364,19 @@ public class OurMSAgent extends MSAgent {
         if (numberOfBombs == numberOfVariables) {
             flagBombs();
         } else {
-            String[] binaryCode = generateBinaryCode(numberOfVariables);
-
-            int[][] truthTable = new int[numberOfVariables][(int) Math.pow(2.0, numberOfVariables)];
+            String[] binary = binaryCode.get(numberOfVariables);
             int[] clause = new int[numberOfVariables];
+
             int bombCounter;
             StringBuilder strClause;
-            StringBuilder check;
 
-            for (int i = 0; i < binaryCode.length; i++) {
+            for (int i = 0; i < binary.length; i++) {
                 bombCounter = 0;
                 for (int j = 0; j < numberOfVariables; j++) {
                     strClause = new StringBuilder("");
-                    check = new StringBuilder("");
-                    truthTable[j][i] = binaryCode[i].charAt(j) == '0' ? 0 : 1;
-                    if (Integer.parseInt(check.append(truthTable[j][i]).toString()) == 0) {
+                    if (binary[i].charAt(j) == '0') {
                         strClause.append("-");
                         strClause.append(variables.get(j));
-
                     } else {
                         strClause.append(variables.get(j));
                         bombCounter++;
@@ -283,30 +391,27 @@ public class OurMSAgent extends MSAgent {
         variables.clear();
     }
 
-    private void flagBombs(){
-            int[] bombs = new int[1];
-            for (int variable : variables) {
-                bombs[0] = -variable;
-                try {
-                    solver.addClause(new VecInt(bombs));
-                } catch (ContradictionException e) {
-                    // e.printStackTrace();
-                }
-            }
-
-    }
-
-    private String[] generateBinaryCode(int numberOfVariables) {
-        String[] binaryCode = new String[(int) Math.pow(2.0, numberOfVariables)];
-        for (int i = 0; i < (int) Math.pow(2.0, numberOfVariables); i++) {
-            binaryCode[i] = Integer.toBinaryString(i);
-            while (binaryCode[i].length() < numberOfVariables) {
-                binaryCode[i] = "0" + binaryCode[i];
+    /**
+     * In case that its only possible to have bombs in the neighbourhood the knowledge base well be updated about this
+     * knowledg.
+     */
+    private void flagBombs() {
+        int[] bombs = new int[1];
+        for (int variable : variables) {
+            bombs[0] = -variable;
+            try {
+                solver.addClause(new VecInt(bombs));
+            } catch (ContradictionException e) {
+                // e.printStackTrace();
             }
         }
-        return binaryCode;
+
     }
 
+    /**
+     * adding a clause to the SAT solver knowledgbase.
+     * @param clause the new clause
+     */
     private void addClauseToSolver(int[] clause) {
         try {
             if (clause.length != 0) {
