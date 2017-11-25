@@ -6,8 +6,9 @@ public class UsageExample {
 
 
 	public static void main(String[] args) {
-		long startTime;
-		long endTime;
+		long startTime = 0;
+		long endTime = 0;
+		long neededTime = 0;
 		// use smaller numbers for larger fields
 		int iterations = 1000;
 		int chosenField = 18;
@@ -53,10 +54,12 @@ public class UsageExample {
 			boolean solved = agent.solve();
 			if (solved) {
 				success++;
+				neededTime += (endTime - startTime);
 			}
 		}
 		Toolkit.getDefaultToolkit().beep();
 		double rate = (double)success / (double)iterations;
+		double timeMiddle = neededTime / (iterations * rate);
 		endTime = System.currentTimeMillis();
 		System.out.println(endTime - startTime + "ms");
 		System.out.println("Erfolgsquote: " + rate + " bei " + iterations + " Wiederholungen für das feld " + fields[chosenField]);

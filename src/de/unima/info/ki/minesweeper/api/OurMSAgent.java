@@ -17,7 +17,6 @@ public class OurMSAgent extends MSAgent {
 
     private boolean firstDecision = true;
     private boolean displayActivated;
-    private int numberOfFields;
 
     private ArrayList<Integer> variables = new ArrayList<>();
     private HashMap<Integer, ArrayList<Integer>> neighboursOfVariables = new HashMap<>();
@@ -101,7 +100,6 @@ public class OurMSAgent extends MSAgent {
      */
     private void initFieldView() {
         fieldView = new int[field.getNumOfCols()][field.getNumOfRows()];
-        numberOfFields = field.getNumOfCols() * field.getNumOfRows();
         for (int i = 0; i < fieldView.length; i++) {
             for (int j = 0; j < fieldView[i].length; j++) {
                 fieldView[i][j] = -1;
@@ -167,7 +165,6 @@ public class OurMSAgent extends MSAgent {
         if (fieldView[column][row] == -1) {
             fieldView[column][row] = field.uncover(column, row);
             createKNF(column, row, fieldView[column][row]);
-            numberOfFields--;
         }
         return fieldView[column][row];
     }
@@ -260,7 +257,6 @@ public class OurMSAgent extends MSAgent {
                 }
                 createKNF(col, row, fieldView[col][row]);
                 System.out.println(field);
-                numberOfFields--;
             }
             return fieldView[col][row];
         }
@@ -290,7 +286,6 @@ public class OurMSAgent extends MSAgent {
                 }
                 createKNF(col, row, fieldView[col][row]);
                 System.out.println(field);
-                numberOfFields--;
                 moveDone = true;
             }
         }
